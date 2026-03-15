@@ -264,3 +264,110 @@ class TestTransport:
         U1 = b1.transport(1.0)
         U2 = b2.transport(1.0)
         assert not np.allclose(U1, U2)
+
+
+# ── Superposition bases tests ─────────────────────────────────────────────
+
+
+class TestSuperpositionBases:
+    """Tests for build_superposition_bases()."""
+
+    def test_shape(self):
+        builder = TransportMapBuilder(K=10, sigma=0.5)
+        bases = builder.build_superposition_bases()
+        n_primes = len(builder.primes)  # primes <= 10: [2, 3, 5, 7] = 4
+        assert bases.shape == (n_primes, 10, 10)
+
+    def test_real_dtype(self):
+        builder = TransportMapBuilder(K=10, sigma=0.5)
+        bases = builder.build_superposition_bases()
+        assert bases.dtype == np.float64
+
+    def test_symmetric_at_half(self):
+        """At sigma=0.5, B_p = log(p)/sqrt(p) * (rho + rho^T) is symmetric."""
+        builder = TransportMapBuilder(K=10, sigma=0.5)
+        bases = builder.build_superposition_bases()
+        for p_idx in range(len(builder.primes)):
+            np.testing.assert_allclose(
+                bases[p_idx], bases[p_idx].T, atol=1e-14,
+                err_msg=f"B_p not symmetric at sigma=0.5 for prime index {p_idx}"
+            )
+
+    def test_asymmetric_off_half(self):
+        """At sigma != 0.5, B_p is NOT symmetric (p^{-sigma} != p^{-(1-sigma)})."""
+        builder = TransportMapBuilder(K=10, sigma=0.3)
+        bases = builder.build_superposition_bases()
+        # Check prime 2 (index 0): rho(2) has entries, so B_2 should be asymmetric
+        assert not np.allclose(bases[0], bases[0].T, atol=1e-10)
+
+    def test_matches_unnormalized_fe_generator(self):
+        """B_p(sigma) should equal the FE generator BEFORE Frobenius normalization."""
+        builder = TransportMapBuilder(K=10, sigma=0.4)
+        bases = builder.build_superposition_bases()
+        for p_idx, p in enumerate(builder.primes):
+            rho = builder.build_prime_rep(p)
+            log_p = np.log(p)
+            expected = log_p * (rho / p**0.4 + rho.T / p**0.6)
+            np.testing.assert_allclose(bases[p_idx], expected, atol=1e-14)
+
+    def test_cached(self):
+        """Second call returns same data without recomputation."""
+        builder = TransportMapBuilder(K=6, sigma=0.5)
+        bases1 = builder.build_superposition_bases()
+        bases2 = builder.build_superposition_bases()
+        np.testing.assert_array_equal(bases1, bases2)
+
+    def test_no_primes(self):
+        """K=1 has no primes <= 1, returns empty (0, 1, 1) array."""
+        builder = TransportMapBuilder(K=1, sigma=0.5)
+        bases = builder.build_superposition_bases()
+        assert bases.shape == (0, 1, 1)
+
+
+# ── Superposition generator tests ─────────────────────────────────────────
+
+
+class TestSuperpositionGenerator:
+    """Tests for build_generator_superposition()."""
+
+    def test_complex_output(self):
+        builder = TransportMapBuilder(K=6, sigma=0.5)
+        A = builder.build_generator_superposition(1.5)
+        assert A.dtype == np.complex128
+
+    def test_shape(self):
+        builder = TransportMapBuilder(K=10, sigma=0.5)
+        A = builder.build_generator_superposition(1.0)
+        assert A.shape == (10, 10)
+
+    def test_non_hermitian_generic_gap(self):
+        """For a generic gap, A should NOT be Hermitian (complex phases break it)."""
+        builder = TransportMapBuilder(K=6, sigma=0.5)
+        A = builder.build_generator_superposition(1.234, normalize=False)
+        # A - A† should be nonzero
+        assert not np.allclose(A, A.conj().T, atol=1e-10)
+
+    def test_normalized_unit_frobenius(self):
+        """With normalize=True, ||A||_F should equal 1."""
+        builder = TransportMapBuilder(K=10, sigma=0.5)
+        A = builder.build_generator_superposition(2.0, normalize=True)
+        np.testing.assert_allclose(np.linalg.norm(A, ord='fro'), 1.0, atol=1e-14)
+
+    def test_unnormalized_nonunit_frobenius(self):
+        """With normalize=False, ||A||_F should NOT be 1 in general."""
+        builder = TransportMapBuilder(K=10, sigma=0.5)
+        A = builder.build_generator_superposition(2.0, normalize=False)
+        assert not np.isclose(np.linalg.norm(A, ord='fro'), 1.0, atol=1e-6)
+
+    def test_zero_gap_sums_all_bases(self):
+        """At dg=0, all phases are 1, so A = sum(B_p)."""
+        builder = TransportMapBuilder(K=6, sigma=0.5)
+        A = builder.build_generator_superposition(0.0, normalize=False)
+        bases = builder.build_superposition_bases()
+        expected = np.sum(bases, axis=0).astype(np.complex128)
+        np.testing.assert_allclose(A, expected, atol=1e-14)
+
+    def test_no_primes_returns_zero(self):
+        builder = TransportMapBuilder(K=1, sigma=0.5)
+        A = builder.build_generator_superposition(1.0)
+        np.testing.assert_allclose(A, np.zeros((1, 1), dtype=np.complex128), atol=1e-14)
