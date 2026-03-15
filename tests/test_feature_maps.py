@@ -29,7 +29,20 @@ class TestIdentityMap:
 
 class TestSpectralUnfolding:
     def test_satisfies_protocol(self):
-        assert isinstance(SpectralUnfolding(method="rank"), FeatureMap)
+        assert isinstance(SpectralUnfolding(method="semicircle"), FeatureMap)
+
+    def test_semicircle_unfolding_preserves_fluctuations(self):
+        """Semicircle unfolding should produce non-trivial gap statistics."""
+        from atft.sources.gue import GUESource
+        cloud = GUESource(seed=42).generate(200)
+        fm = SpectralUnfolding(method="semicircle")
+        result = fm.transform(cloud)
+        unfolded = np.sort(result.points[:, 0])
+        gaps = np.diff(unfolded)
+        # Mean gap should be approximately 1
+        assert 0.8 < np.mean(gaps) < 1.2
+        # Crucially: gaps must have nonzero variance (level repulsion)
+        assert np.std(gaps) > 0.1
 
     def test_rank_unfolding_mean_gap(self):
         rng = np.random.default_rng(42)

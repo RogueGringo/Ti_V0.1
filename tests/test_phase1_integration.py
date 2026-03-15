@@ -27,7 +27,7 @@ class TestFullPipeline:
 
         gue_src = GUESource(seed=42)
         gue_batch = gue_src.generate_batch(N_POINTS, ENSEMBLE_SIZE)
-        gue_unfolded = SpectralUnfolding(method="rank").transform_batch(gue_batch)
+        gue_unfolded = SpectralUnfolding(method="semicircle").transform_batch(gue_batch)
         gue_pds = ph.compute_batch(gue_unfolded)
         gue_curves = [curves_computer.compute(pd) for pd in gue_pds]
         gue_sigs = [wp_extractor.extract(pd, c) for pd, c in zip(gue_pds, gue_curves)]
@@ -54,7 +54,7 @@ class TestFullPipeline:
 
         gue_src = GUESource(seed=42)
         batch = gue_src.generate_batch(N_POINTS, 10)
-        unfolded = SpectralUnfolding(method="rank").transform_batch(batch)
+        unfolded = SpectralUnfolding(method="semicircle").transform_batch(batch)
         pds = ph.compute_batch(unfolded)
         curveset = [curves_computer.compute(pd) for pd in pds]
         sigs = [wp_extractor.extract(pd, c) for pd, c in zip(pds, curveset)]
@@ -66,7 +66,7 @@ class TestFullPipeline:
     def test_betti_curve_properties(self):
         gue_src = GUESource(seed=42)
         cloud = gue_src.generate(N_POINTS)
-        unfolded = SpectralUnfolding(method="rank").transform(cloud)
+        unfolded = SpectralUnfolding(method="semicircle").transform(cloud)
         pd = AnalyticalH0().compute(unfolded)
         curves = EvolutionCurveComputer(n_steps=200).compute(pd)
         betti = curves.betti[0]

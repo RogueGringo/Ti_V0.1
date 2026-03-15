@@ -70,7 +70,7 @@ class Phase1Experiment:
 
         print("Step 4/10: Unfolding spectra...")
         zeta_unfolded = SpectralUnfolding(method="zeta").transform(zeta_cloud)
-        gue_unfolded = SpectralUnfolding(method="rank").transform_batch(gue_batch)
+        gue_unfolded = SpectralUnfolding(method="semicircle").transform_batch(gue_batch)
         poisson_unfolded = IdentityMap().transform_batch(poisson_batch)
 
         print("Step 5/10: Computing persistence diagrams...")

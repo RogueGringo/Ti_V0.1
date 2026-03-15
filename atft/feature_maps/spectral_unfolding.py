@@ -14,15 +14,17 @@ class SpectralUnfolding:
       - "zeta": Analytic smooth staircase for Riemann zeta zeros.
     """
 
-    def __init__(self, method: str = "rank"):
-        if method not in ("rank", "zeta"):
-            raise ValueError(f"Unknown method: {method!r}. Use 'rank' or 'zeta'.")
+    def __init__(self, method: str = "semicircle"):
+        if method not in ("semicircle", "rank", "zeta"):
+            raise ValueError(f"Unknown method: {method!r}. Use 'semicircle', 'rank', or 'zeta'.")
         self._method = method
 
     def transform(self, cloud: PointCloud) -> PointCloud:
         pts = cloud.points[:, 0].copy()
 
-        if self._method == "rank":
+        if self._method == "semicircle":
+            unfolded = self._semicircle_unfold(pts)
+        elif self._method == "rank":
             unfolded = self._rank_unfold(pts)
         elif self._method == "zeta":
             unfolded = self._zeta_unfold(pts)
@@ -36,6 +38,26 @@ class SpectralUnfolding:
         return PointCloudBatch(
             clouds=[self.transform(c) for c in batch.clouds]
         )
+
+    @staticmethod
+    def _semicircle_unfold(pts: np.ndarray) -> np.ndarray:
+        """Unfold GUE eigenvalues via the Wigner semicircle CDF.
+
+        For semicircle on [-a, a]:
+          F(x) = 1/2 + (x/a * sqrt(1-(x/a)^2) + arcsin(x/a)) / pi
+          N_smooth(lambda_i) = N * F(lambda_i)
+
+        Uses the empirical spectral edge (plus small pad) as the support
+        boundary to handle finite-N Tracy-Widom fluctuations.
+        """
+        n = len(pts)
+        x = np.sort(pts)
+        # Rescale support to empirical edge to avoid clipping
+        x_max = np.max(np.abs(x))
+        support = max(x_max * 1.001, 1.0)
+        x_scaled = x / support
+        cdf = 0.5 + (x_scaled * np.sqrt(1.0 - x_scaled**2) + np.arcsin(x_scaled)) / np.pi
+        return n * cdf
 
     @staticmethod
     def _rank_unfold(pts: np.ndarray) -> np.ndarray:
