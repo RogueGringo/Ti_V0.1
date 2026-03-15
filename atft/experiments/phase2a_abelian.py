@@ -136,7 +136,6 @@ class Phase2aAbelian:
 
                 for eps in epsilon_grid:
                     if eps <= 0:
-                        max_kernel = max(max_kernel, self._N)
                         continue
 
                     L = self._build_twisted_laplacian_fast(omega, eps)
