@@ -168,6 +168,7 @@ def plot_sheaf_betti_curves(
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight")
 
+    plt.close(fig)
     return fig
 
 
@@ -200,6 +201,7 @@ def plot_sigma_peak(
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight")
 
+    plt.close(fig)
     return fig
 
 
@@ -221,4 +223,5 @@ def plot_resonance_matrix(
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight")
 
+    plt.close(fig)
     return fig

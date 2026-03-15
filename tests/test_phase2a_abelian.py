@@ -49,6 +49,19 @@ class TestTwistedLaplacian:
         assert np.all(eigs >= -1e-12)
 
 
+    def test_fast_matches_static(self):
+        """Vectorized _build_twisted_laplacian_fast must match static version."""
+        zeros = np.array([0.0, 0.5, 1.0, 1.5, 2.0])
+        builder = TransportMapBuilder(K=3, sigma=0.5)
+        diag = Phase2aAbelian(builder, zeros)
+
+        for omega in [0.0, 1.23, -0.7, 3.14]:
+            L_static = Phase2aAbelian._build_twisted_laplacian(zeros, omega, epsilon=1.5)
+            L_fast = diag._build_twisted_laplacian_fast(omega, epsilon=1.5)
+            assert_allclose(L_fast, L_static, atol=1e-14,
+                            err_msg=f"Mismatch at omega={omega}")
+
+
 class TestResonanceMatrix:
     """Test the full resonance matrix computation."""
 

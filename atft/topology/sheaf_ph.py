@@ -53,7 +53,7 @@ class SheafPH:
             tol = lap.frobenius_norm_estimate(eps) * 1e-6
             if tol == 0:
                 tol = 1e-12
-            kernel_dims[idx] = int(np.sum(np.abs(eigs) < tol))
+            kernel_dims[idx] = int(np.sum(eigs < tol))
 
         return SheafBettiCurve(
             epsilon_grid=np.array(epsilon_grid, dtype=np.float64),

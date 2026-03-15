@@ -258,7 +258,7 @@ class SheafLaplacian:
         )
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            eigenvalues, _ = lobpcg(op, X0, largest=False, maxiter=500, tol=1e-10)
+            eigenvalues, _ = lobpcg(op, X0, largest=False, maxiter=1000, tol=1e-10)
         return eigenvalues
 
     def _solve_eigsh(
