@@ -107,3 +107,118 @@ def _plot_envelope(ax, ensemble_curves, attr, degree, label="99% band"):
     mean = np.mean(all_vals, axis=0)
     ax.fill_between(ref_eps, lower, upper, color="grey", alpha=0.3, label=label)
     ax.plot(ref_eps, mean, "k-", linewidth=0.5, alpha=0.5)
+
+
+def plot_sheaf_betti_curves(
+    curves: list,
+    highlight_sigma: float | None = 0.5,
+    save_path: Path | None = None,
+) -> plt.Figure:
+    """Three-panel sheaf Betti curve figure.
+
+    Panel A: Highlighted sigma curve
+    Panel B: Overlay of all sigma values
+    Panel C: Heatmap if multiple curves provided
+    """
+    n_panels = 3 if len(curves) > 1 else 1
+    fig, axes = plt.subplots(1, n_panels, figsize=(6 * n_panels, 5))
+    if n_panels == 1:
+        axes = [axes]
+
+    # Panel A: highlighted curve (or single curve)
+    ax = axes[0]
+    for c in curves:
+        if highlight_sigma is not None and abs(c.sigma - highlight_sigma) < 1e-6:
+            ax.plot(c.epsilon_grid, c.kernel_dimensions, "b-", linewidth=2,
+                    label=f"σ = {c.sigma}")
+        else:
+            ax.plot(c.epsilon_grid, c.kernel_dimensions, color="grey", alpha=0.4,
+                    linewidth=1)
+    ax.set_xlabel("ε")
+    ax.set_ylabel("β₀ᶠ(ε)")
+    ax.set_title("Sheaf Betti Curve")
+    ax.legend()
+
+    if n_panels > 1:
+        # Panel B: all curves overlaid
+        ax = axes[1]
+        for c in curves:
+            color = "blue" if highlight_sigma and abs(c.sigma - highlight_sigma) < 1e-6 else "grey"
+            alpha = 1.0 if color == "blue" else 0.4
+            ax.plot(c.epsilon_grid, c.kernel_dimensions, color=color, alpha=alpha,
+                    linewidth=1.5, label=f"σ={c.sigma:.2f}" if color == "blue" else None)
+        ax.set_xlabel("ε")
+        ax.set_ylabel("β₀ᶠ(ε)")
+        ax.set_title("σ Overlay")
+        ax.legend()
+
+        # Panel C: heatmap
+        ax = axes[2]
+        sigmas = np.array([c.sigma for c in curves])
+        eps = curves[0].epsilon_grid
+        heatmap = np.array([c.kernel_dimensions for c in curves])
+        im = ax.pcolormesh(eps, sigmas, heatmap, shading="auto", cmap="viridis")
+        ax.set_xlabel("ε")
+        ax.set_ylabel("σ")
+        ax.set_title("Phase Diagram β₀ᶠ(ε, σ)")
+        fig.colorbar(im, ax=ax, label="β₀ᶠ")
+
+    plt.tight_layout()
+
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+
+    return fig
+
+
+def plot_sigma_peak(
+    result,
+    save_path: Path | None = None,
+) -> plt.Figure:
+    """Plot max_ε β₀^F(ε, σ) vs σ — the phase transition signature."""
+    max_betti = np.max(result.betti_heatmap[:, 1:], axis=1)  # skip eps=0
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.plot(result.sigma_grid, max_betti, "ko-", linewidth=2, markersize=8)
+    ax.axvline(x=0.5, color="red", linestyle="--", alpha=0.5, label="σ = 1/2")
+    ax.set_xlabel("σ")
+    ax.set_ylabel("max_ε β₀ᶠ(ε, σ)")
+    ax.set_title("σ-Criticality: Topological Phase Transition")
+    ax.legend()
+
+    if result.peak_sigma is not None:
+        ax.annotate(
+            f"Peak: σ = {result.peak_sigma:.2f}\nβ₀ᶠ = {result.peak_kernel_dim}",
+            xy=(result.peak_sigma, result.peak_kernel_dim),
+            xytext=(result.peak_sigma + 0.05, result.peak_kernel_dim * 0.8),
+            arrowprops=dict(arrowstyle="->"),
+            fontsize=10,
+        )
+
+    plt.tight_layout()
+
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+
+    return fig
+
+
+def plot_resonance_matrix(
+    R: np.ndarray,
+    eigenvalues: np.ndarray,
+    save_path: Path | None = None,
+) -> plt.Figure:
+    """Plot the K×K abelian resonance matrix as a heatmap."""
+    fig, ax = plt.subplots(figsize=(8, 7))
+    im = ax.imshow(R, cmap="hot", interpolation="nearest", origin="lower")
+    ax.set_xlabel("Eigenbasis index l")
+    ax.set_ylabel("Eigenbasis index k")
+    ax.set_title("Phase 2a Resonance Matrix R_{kl}")
+    fig.colorbar(im, ax=ax, label="max_ε dim ker L_{ω_{kl}}")
+
+    plt.tight_layout()
+
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+
+    return fig
