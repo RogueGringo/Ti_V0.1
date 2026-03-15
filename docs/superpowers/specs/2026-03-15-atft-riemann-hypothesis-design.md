@@ -57,7 +57,7 @@ Freeman Dyson and Hugh Montgomery discovered that the pair correlation of zeta z
 Raw spectra have non-uniform average density. Unfolding normalizes to mean gap = 1, isolating the fluctuations (which encode universality class) from the trend (which is system-specific).
 
 - **Zeta zeros:** N_smooth(T) = (T/(2*pi)) * ln(T/(2*pi*e)) + 7/8. Unfolded zeros: x_i = N_smooth(gamma_i).
-- **GUE eigenvalues:** Rank-based unfolding via empirical CDF of each individual matrix: x_i = rank(lambda_i) / N. This is robust to finite-size effects and does not require knowing the exact normalization of the semicircle law.
+- **GUE eigenvalues:** Rank-based unfolding via empirical CDF of each individual matrix: x_i = rank(lambda_i), where ranks run from 0 to N-1. This produces mean gap = 1, is robust to finite-size effects, and does not require knowing the exact normalization of the semicircle law.
 - **Poisson:** Cumulative sum of Exp(1) gaps; trivially unfolded. Uses the identity feature map (bypasses SpectralUnfolding entirely).
 
 ### 2.4 The H_0 Analytical Shortcut
@@ -95,7 +95,7 @@ W_0(C) = (eps*, {eps_{w,i}}_{i=1}^K, {delta_0(eps_{w,i})}_{i=1}^K, G_0(eps*), dG
 Where:
 - eps* = onset scale (first eps where topology changes)
 - eps_{w,i} = top-K waypoint scales (the K largest gaps in the sorted gap sequence, sorted by epsilon position)
-- delta_0(eps_{w,i}) = topological derivative values at waypoints (the magnitude of the Betti number drop at that gap scale)
+- delta_0(eps_{w,i}) = gap magnitudes at waypoints, used as a proxy for the topological derivative. In 1D H_0, every single merging event produces a Betti drop of exactly -1, making the literal derivative a constant with zero variance across the ensemble. The gap magnitude at the waypoint scale is a more informative proxy: larger gaps produce sharper effective transitions in the Betti curve when viewed at finite epsilon resolution
 - G_0(eps*) = Gini coefficient at onset
 - dG_0/deps|_{eps*} = Gini trajectory slope at onset
 
