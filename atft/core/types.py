@@ -152,3 +152,27 @@ class ValidationResult:
     within_confidence_band: bool
     ensemble_size: int
     metadata: dict = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class SheafBettiCurve:
+    """Sheaf Betti number beta_0^F(epsilon) across filtration scales."""
+
+    epsilon_grid: NDArray[np.float64]
+    kernel_dimensions: NDArray[np.int64]
+    smallest_eigenvalues: NDArray[np.float64]  # shape (n_steps, m)
+    sigma: float
+    K: int
+
+
+@dataclass(frozen=True)
+class SheafValidationResult:
+    """Output of the sigma-sweep experiment."""
+
+    sigma_grid: NDArray[np.float64]
+    epsilon_grid: NDArray[np.float64]
+    betti_heatmap: NDArray[np.int64]  # shape (n_sigma, n_epsilon)
+    peak_sigma: float
+    peak_kernel_dim: int
+    is_unique_peak: bool
+    metadata: dict = field(default_factory=dict)
