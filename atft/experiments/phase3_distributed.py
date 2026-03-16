@@ -78,7 +78,10 @@ def run_sweep(
         for eps in epsilon_grid:
             t0 = time.time()
 
-            if backend == "gpu":
+            if backend == "torch-gpu":
+                from atft.topology.torch_sheaf_laplacian import TorchSheafLaplacian
+                lap = TorchSheafLaplacian(builder, zeros, transport_mode="superposition")
+            elif backend == "gpu":
                 from atft.topology.gpu_sheaf_laplacian import GPUSheafLaplacian
                 lap = GPUSheafLaplacian(builder, zeros, transport_mode="superposition")
             else:
@@ -168,6 +171,10 @@ def main():
                         help="Comma-separated trial indices (e.g., '3,4,5')")
     parser.add_argument("--zeta-only", action="store_true",
                         help="Skip random and GUE controls (budget-conscious mode)")
+    parser.add_argument("--backend", type=str, default=None,
+                        choices=["cpu", "gpu", "torch-gpu"],
+                        help="Override backend (default: from role config). "
+                             "torch-gpu works on both NVIDIA CUDA and AMD ROCm.")
     parser.add_argument("--output-dir", type=str, default="output")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
@@ -176,7 +183,7 @@ def main():
     K = cfg["K"]
     N = cfg["N"]
     k_eig = cfg["k_eig"]
-    backend = cfg["backend"]
+    backend = args.backend if args.backend else cfg["backend"]
     sigma_grid = np.array(cfg["sigma_grid"])
     epsilon_grid = np.array(cfg["epsilon_grid"])
 
@@ -191,14 +198,25 @@ def main():
     sys.stdout.flush()
 
     # Check GPU if needed
-    if backend == "gpu":
+    if backend == "torch-gpu":
+        try:
+            import torch
+            if not torch.cuda.is_available():
+                raise RuntimeError("No CUDA/ROCm device found")
+            mem_free, mem_total = torch.cuda.mem_get_info()
+            gpu_name = torch.cuda.get_device_name(0)
+            print(f"  GPU: {gpu_name}")
+            print(f"  VRAM: {mem_free/1e9:.2f} GB free / {mem_total/1e9:.2f} GB total")
+        except Exception as e:
+            print(f"  WARNING: torch-gpu unavailable ({e}), falling back to CPU")
+            backend = "cpu"
+    elif backend == "gpu":
         try:
             import cupy as cp
             mem = cp.cuda.Device(0).mem_info
-            print(f"  GPU: {mem[0]/1e9:.2f} GB free / {mem[1]/1e9:.2f} GB VRAM")
+            print(f"  GPU (CuPy): {mem[0]/1e9:.2f} GB free / {mem[1]/1e9:.2f} GB VRAM")
         except Exception as e:
-            print(f"  WARNING: GPU unavailable ({e}), falling back to CPU")
-            cfg["backend"] = "cpu"
+            print(f"  WARNING: CuPy GPU unavailable ({e}), falling back to CPU")
             backend = "cpu"
 
     # Load zeta zeros
