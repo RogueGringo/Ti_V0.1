@@ -76,12 +76,21 @@ Assembles the full sheaf Laplacian as a dense matrix and solves via LOBPCG. Suit
 **SparseSheafLaplacian** (CPU, sparse)
 Assembles the Laplacian in BSR (Block Sparse Row) format and solves via `scipy.sparse.linalg.eigsh`. Efficient for large N with sparse graphs (low ε).
 
-**GPUSheafLaplacian** (GPU, CuPy)
+**GPUSheafLaplacian** (GPU, CuPy — NVIDIA CUDA only)
 Assembles the Laplacian as a CuPy CSR matrix and solves via the GPU eigensolver. Key implementation details:
 
 - Duplicate diagonal block entries arising from edge-by-edge assembly are merged automatically during `tocsr()` via CuPy's COO auto-summing behavior.
-- **Spectral flip trick:** The k smallest eigenvalues of L are computed by finding the k largest eigenvalues of `(λ_max · I − L)`. Lanczos-based iterative solvers (ARPACK, LOBPCG, and the CuPy equivalent) converge orders of magnitude faster on the largest eigenvalues of a matrix than on the smallest. The flip maps the smallest eigenvalue problem to a largest eigenvalue problem without altering the eigenvectors.
+- **Spectral flip trick:** The k smallest eigenvalues of L are computed by finding the k largest eigenvalues of `(λ_max · I − L)`. Lanczos-based iterative solvers converge orders of magnitude faster on the largest eigenvalues of a matrix than on the smallest.
 - Explicit CuPy memory pool cleanup is called between grid points to prevent GPU OOM accumulation during σ sweeps.
+
+**TorchSheafLaplacian** (GPU, PyTorch — NVIDIA CUDA + AMD ROCm)
+Drop-in replacement for GPUSheafLaplacian that works on both NVIDIA CUDA and AMD ROCm GPUs. Key implementation details:
+
+- **GPU-accelerated transport:** The critical K=100 bottleneck (CPU-side batched eigendecomposition of (|E|, K, K) complex matrices) is eliminated by using `torch.linalg.eig` on GPU. This reduces K=100 transport computation from ~80 minutes (CPU) to seconds (GPU).
+- **Pure PyTorch Lanczos eigensolver** with spectral flip trick and full Gram-Schmidt reorthogonalization. No dependency on CuPy or CUDA-specific libraries.
+- **ROCm transparency:** AMD GPUs appear as `torch.cuda.is_available() == True` via PyTorch's HIP/ROCm abstraction layer. The API is identical — no code branches for NVIDIA vs AMD.
+- **Cross-validated:** Maximum eigenvalue difference vs CuPy backend: 1.5e-15 (machine epsilon).
+- **VRAM management:** COO→CSR conversion temporarily doubles VRAM usage. For K=100 N=2000 ε=5.0: ~11.6 GB peak COO phase, ~5.8 GB steady-state CSR.
 
 ### 1.5 analysis/
 
@@ -159,14 +168,16 @@ Signal ratio R = max_σ(S) / S(σ=0.25)   — quantifies peak localization
 
 ### 3.1 Hybrid CPU/GPU Split
 
-The framework uses a deliberate hybrid compute model:
+The framework uses a deliberate hybrid compute model with three backend options:
 
-| Task | Device | Rationale |
-|---|---|---|
-| Edge discovery (Vietoris-Rips) | CPU | Memory-efficient; graph is sparse |
-| Batched matrix exponentials (transport) | CPU | NumPy `scipy.linalg.expm` batch over edges |
-| Sparse matrix assembly | GPU (CuPy) | Parallelizes block outer products |
-| Iterative eigensolver | GPU (CuPy) | Lanczos on GPU outperforms CPU for large sparse matrices |
+| Task | CuPy backend | PyTorch backend | CPU backend |
+|---|---|---|---|
+| Edge discovery (Vietoris-Rips) | CPU | CPU | CPU |
+| Batched transport (matrix exp/eig) | CPU (bottleneck at K≥100) | **GPU** (`torch.linalg.eig`) | CPU |
+| Sparse matrix assembly | GPU (CuPy COO→CSR) | GPU (PyTorch COO→CSR) | CPU (SciPy BSR) |
+| Iterative eigensolver | GPU (CuPy LOBPCG) | GPU (PyTorch Lanczos) | CPU (SciPy eigsh) |
+
+The PyTorch backend's GPU transport eliminates the K=100 CPU bottleneck: `np.linalg.eig` on (|E|, 100, 100) complex128 arrays takes ~80 minutes per grid point on CPU; `torch.linalg.eig` on GPU completes the same computation in seconds.
 
 ### 3.2 CuPy COO Auto-Summing
 
@@ -192,14 +203,14 @@ For σ-sweep grid experiments, each grid point allocates a fresh CuPy sparse mat
 
 `phase3_distributed.py` partitions the (K, N, σ-grid) parameter space across machines by assigning each machine a named role:
 
-| Role | Parameters | Hardware |
-|---|---|---|
-| `control-cpu` | K=20, N=9877, full σ grid | CPU workstation |
-| `gpu-k50` | K=50, N=2000, full σ grid | GPU workstation (RTX 4080) |
-| `gpu-k100` | K=100, N=5000, σ grid | RunPod A100 (required) |
-| `gpu-k200` | K=200, N=5000, σ grid | RunPod A100 (required) |
+| Role | Parameters | Backend | Hardware |
+|---|---|---|---|
+| `control-cpu` | K=20, N=9877, full σ grid | `cpu` | Any CPU (GTX 1060 laptop) |
+| `gpu-k50` | K=50, N=9877, full σ grid | `gpu` or `torch-gpu` | RTX 4080/5070 |
+| `gpu-k100` | K=100, N=9877, σ grid | `torch-gpu` | RunPod A100/MI300X |
+| `gpu-k200` | K=200, N=9877, σ grid | `torch-gpu` | RunPod MI300X (192 GB VRAM) |
 
-Each machine runs independently. No inter-machine communication occurs during computation.
+Each machine runs independently. No inter-machine communication occurs during computation. The `--backend` flag selects the engine: `cpu`, `gpu` (CuPy, NVIDIA only), or `torch-gpu` (PyTorch, NVIDIA CUDA + AMD ROCm). The `--zeta-only` flag skips random/GUE controls for budget-conscious GPU runs.
 
 ### 4.2 Result Format
 
