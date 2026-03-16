@@ -79,6 +79,9 @@ class TransportMapBuilder:
             NDArray[np.complex128],   # P_inv
         ]] | None = None
 
+        # Superposition per-prime basis matrices
+        self._superposition_bases: NDArray[np.float64] | None = None
+
     @property
     def K(self) -> int:
         return self._K
@@ -382,5 +385,131 @@ class TransportMapBuilder:
             )
             # U[m] = P @ diag(phases[m]) @ P_inv
             result[mask] = np.einsum('ik,mk,kj->mij', P, phases, P_inv)
+
+        return result
+
+    # ── Superposition (explicit formula) transport ──────────────────────
+
+    def build_superposition_bases(self) -> NDArray[np.float64]:
+        """Precompute B_p(sigma) for all primes.
+
+        B_p(sigma) = log(p) * [p^{-sigma} rho(p) + p^{-(1-sigma)} rho(p)^T]
+
+        This is the un-normalized functional equation generator.
+        Returns (P, K, K) float64 array where P = number of primes <= K.
+        """
+        if self._superposition_bases is not None:
+            return self._superposition_bases.copy()
+
+        P = len(self._primes)
+        K = self._K
+        if P == 0:
+            self._superposition_bases = np.empty((0, K, K), dtype=np.float64)
+            return self._superposition_bases.copy()
+
+        bases = np.zeros((P, K, K), dtype=np.float64)
+        for idx, p in enumerate(self._primes):
+            rho = self.build_prime_rep(p)
+            log_p = np.log(p)
+            fwd = log_p / p**self._sigma
+            bwd = log_p / p**(1 - self._sigma)
+            bases[idx] = fwd * rho + bwd * rho.T
+
+        self._superposition_bases = bases
+        # Ensure log_primes is available for phase computation
+        if self._log_primes is None:
+            self._log_primes = np.array([np.log(p) for p in self._primes])
+        return bases.copy()
+
+    def build_generator_superposition(
+        self, delta_gamma: float, normalize: bool = True
+    ) -> NDArray[np.complex128]:
+        """Superposition generator for a single edge.
+
+        A_{ij}(sigma) = sum_p e^{i * dg * log(p)} * B_p(sigma)
+
+        Args:
+            delta_gamma: Gap gamma_j - gamma_i for this edge.
+            normalize: If True, normalize A by its Frobenius norm.
+
+        Returns:
+            (K, K) complex128 matrix.
+        """
+        bases = self.build_superposition_bases()
+        K = self._K
+
+        if len(bases) == 0:
+            return np.zeros((K, K), dtype=np.complex128)
+
+        phases = np.exp(1j * delta_gamma * self._log_primes)  # (P,)
+        A = np.einsum('p,pij->ij', phases, bases)  # (K, K) complex
+
+        if normalize:
+            norm = np.linalg.norm(A, ord='fro')
+            if norm > 0:
+                A = A / norm
+
+        return A
+
+    def batch_transport_superposition(
+        self,
+        delta_gammas: NDArray[np.float64],
+        normalize: bool = True,
+    ) -> NDArray[np.complex128]:
+        """Batch superposition transport for M edges.
+
+        Computes U[e] = exp(i * A[e]) where A[e] is the superposition
+        generator for each edge. Uses batched eigendecomposition with
+        scipy.linalg.expm fallback for defective matrices.
+
+        Args:
+            delta_gammas: (M,) array of gap values.
+            normalize: If True, Frobenius-normalize each generator.
+
+        Returns:
+            (M, K, K) complex128 array of transport matrices.
+        """
+        bases = self.build_superposition_bases()
+        M = len(delta_gammas)
+        K = self._K
+
+        if M == 0:
+            return np.empty((0, K, K), dtype=np.complex128)
+
+        if len(bases) == 0:
+            return np.tile(np.eye(K, dtype=np.complex128), (M, 1, 1))
+
+        # Phase matrix: (M, P) complex
+        phases = np.exp(
+            1j * delta_gammas[:, np.newaxis] * self._log_primes[np.newaxis, :]
+        )
+
+        # Generator batch: (M, K, K) complex via tensor contraction
+        A_batch = np.einsum('ep,pij->eij', phases, bases)
+
+        # Optional per-edge Frobenius normalization
+        if normalize:
+            norms = np.linalg.norm(A_batch.reshape(M, -1), axis=1)
+            mask = norms > 0
+            A_batch[mask] /= norms[mask, np.newaxis, np.newaxis]
+
+        # Matrix exponential via batched eigendecomposition
+        eigenvals, P_mat = np.linalg.eig(A_batch)  # (M,K), (M,K,K)
+        P_inv = np.linalg.inv(P_mat)  # (M, K, K)
+
+        # exp(i * A) = P @ diag(exp(i * lambda)) @ P_inv
+        exp_eigenvals = np.exp(1j * eigenvals)  # (M, K)
+        result = np.einsum('mik,mk,mkj->mij', P_mat, exp_eigenvals, P_inv)
+
+        # Check for defective matrices and fix with expm fallback
+        P_norms = np.linalg.norm(P_mat.reshape(M, -1), axis=1)
+        P_inv_norms = np.linalg.norm(P_inv.reshape(M, -1), axis=1)
+        cond_est = P_norms * P_inv_norms
+        defective = cond_est > 1e12
+
+        if np.any(defective):
+            from scipy.linalg import expm
+            for idx in np.where(defective)[0]:
+                result[idx] = expm(1j * A_batch[idx])
 
         return result
