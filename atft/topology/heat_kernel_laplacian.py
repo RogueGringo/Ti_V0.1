@@ -52,13 +52,16 @@ class HeatKernelSheafLaplacian(TorchSheafLaplacian):
         transport_mode: "superposition" (default), "fe", or "resonant".
         device: Torch device (None for auto-detection).
         t: Heat diffusion time. Larger t emphasizes smaller eigenvalues.
-            Default 10.0 is a good balance for K=20-100.
+            Default 1.0 balances sensitivity vs compute cost. At K=100
+            with lam_max~100, t=1.0 gives alpha=50 and ~95 Chebyshev
+            iterations. t=10.0 would require ~770 iterations.
         num_vectors: Number of Rademacher probe vectors for Hutchinson
             estimator. More vectors = lower variance. Default 30 gives
             ~18% relative error on the trace.
         degree: Chebyshev polynomial degree. If None, auto-selected
-            based on t and lambda_max. Must be >= t*lambda_max/2 for
-            convergence.
+            based on t and lambda_max. Capped at 300 to keep compute
+            bounded. Increase t for more spectral resolution rather
+            than increasing degree beyond 300.
     """
 
     def __init__(
@@ -67,7 +70,7 @@ class HeatKernelSheafLaplacian(TorchSheafLaplacian):
         zeros,
         transport_mode: str = "superposition",
         device=None,
-        t: float = 10.0,
+        t: float = 1.0,
         num_vectors: int = 30,
         degree: int | None = None,
     ):
@@ -131,7 +134,7 @@ class HeatKernelSheafLaplacian(TorchSheafLaplacian):
 
         if degree is None:
             degree = max(int(1.5 * alpha) + 20, 50)
-            degree = min(degree, 2000)
+            degree = min(degree, 300)
 
         # 3. Chebyshev coefficients using exponentially-scaled Bessel
         #    ive(k, alpha) = I_k(alpha) * e^{-alpha}
