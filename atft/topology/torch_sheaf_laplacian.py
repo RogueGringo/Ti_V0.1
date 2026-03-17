@@ -88,7 +88,7 @@ def _lanczos_largest(
         # This is essential to prevent ghost eigenvalues in finite precision
         for reorth_pass in range(2):
             coeffs = torch.mv(V[:j + 1].conj(), w)
-            w = w - torch.mv(V[:j + 1].T, coeffs.conj())
+            w = w - torch.mv(V[:j + 1].T, coeffs)
 
         b_j = torch.linalg.norm(w).real
         if b_j < 1e-14:
