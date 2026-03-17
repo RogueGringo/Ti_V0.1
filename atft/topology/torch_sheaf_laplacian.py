@@ -7,7 +7,7 @@ By using PyTorch as the GPU backend, this module works identically on:
   - CPU fallback when no GPU is available
 
 Architecture (hybrid CPU/GPU):
-  - CPU: edge discovery via 1D binary search (fast, saves VRAM)
+  - CPU: edge discovery via base class (fast, saves VRAM)
   - GPU: transport computation (batched eig), sparse assembly, Lanczos eigensolver
 
 The key performance win over the CuPy version is GPU-accelerated transport:
@@ -27,6 +27,9 @@ try:
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
+
+from atft.topology.base_sheaf_laplacian import BaseSheafLaplacian
+from atft.topology.transport_maps import TransportMapBuilder
 
 
 def _lanczos_largest(
@@ -183,7 +186,7 @@ def lanczos_smallest(
     return eigs
 
 
-class TorchSheafLaplacian:
+class TorchSheafLaplacian(BaseSheafLaplacian):
     """PyTorch-based sheaf Laplacian -- works on CUDA and ROCm.
 
     Drop-in replacement for GPUSheafLaplacian. Auto-detects GPU backend.
@@ -198,7 +201,6 @@ class TorchSheafLaplacian:
 
     The class exposes the same interface as GPUSheafLaplacian:
       - __init__(builder, zeros, transport_mode="superposition", device=None)
-      - build_edge_list(epsilon) -> (i_idx, j_idx, gaps)
       - build_matrix(epsilon) -> torch sparse CSR tensor
       - smallest_eigenvalues(epsilon, k=100) -> numpy array
       - spectral_sum(epsilon, k=100) -> float
@@ -215,8 +217,8 @@ class TorchSheafLaplacian:
 
     def __init__(
         self,
-        builder,
-        zeros,
+        builder: TransportMapBuilder,
+        zeros: NDArray[np.float64] | np.ndarray,
         transport_mode: str = "superposition",
         device=None,
     ):
@@ -224,8 +226,11 @@ class TorchSheafLaplacian:
             raise ImportError(
                 "PyTorch is required for TorchSheafLaplacian. "
                 "Install with: pip install torch  "
-                "(for ROCm: pip install torch --index-url https://download.pytorch.org/whl/rocm6.0)"
+                "(for ROCm: pip install torch --index-url "
+                "https://download.pytorch.org/whl/rocm6.0)"
             )
+
+        super().__init__(builder, zeros, transport_mode)
 
         # Auto-detect device: CUDA covers both NVIDIA and AMD ROCm
         if device is None:
@@ -234,64 +239,6 @@ class TorchSheafLaplacian:
             else:
                 device = "cpu"
         self.device = torch.device(device)
-
-        self.builder = builder
-        self.zeros = np.array(zeros)  # Keep on CPU for edge discovery
-        self.N = len(zeros)
-        self.K = builder.K
-        self.transport_mode = transport_mode
-
-    def build_edge_list(
-        self, epsilon: float
-    ) -> tuple[NDArray[np.int64], NDArray[np.int64], NDArray[np.float64]]:
-        """1D edge discovery on CPU (fast and does not waste VRAM).
-
-        Returns (i_idx, j_idx, gaps) with i < j convention and positive gaps.
-        For N > 5000, uses binary search (O(N log N)) to avoid O(N^2) memory.
-
-        This is identical to the CuPy version -- edge discovery is inherently
-        sequential and cheap compared to transport/eigensolver, so it stays
-        on CPU.
-        """
-        zeros = self.zeros
-        N = self.N
-
-        if epsilon <= 0 or N < 2:
-            return (
-                np.array([], dtype=np.int64),
-                np.array([], dtype=np.int64),
-                np.array([], dtype=np.float64),
-            )
-
-        if N <= 5000:
-            # Pairwise approach -- fine for moderate N
-            diff = zeros[None, :] - zeros[:, None]  # diff[i,j] = zeros[j] - zeros[i]
-            mask = (diff > 0) & (diff <= epsilon)
-            i_idx, j_idx = np.where(mask)
-            gaps = zeros[j_idx] - zeros[i_idx]
-        else:
-            # Binary search -- O(N log N + |E|) for large N
-            i_parts, j_parts = [], []
-            for i in range(N - 1):
-                j_right = int(np.searchsorted(zeros, zeros[i] + epsilon, side='right'))
-                j_right = min(j_right, N)
-                if i + 1 < j_right:
-                    js = np.arange(i + 1, j_right, dtype=np.int64)
-                    i_parts.append(np.full(len(js), i, dtype=np.int64))
-                    j_parts.append(js)
-            if i_parts:
-                i_idx = np.concatenate(i_parts)
-                j_idx = np.concatenate(j_parts)
-            else:
-                i_idx = np.array([], dtype=np.int64)
-                j_idx = np.array([], dtype=np.int64)
-            gaps = (
-                zeros[j_idx] - zeros[i_idx]
-                if len(i_idx) > 0
-                else np.array([], dtype=np.float64)
-            )
-
-        return i_idx, j_idx, gaps
 
     def gpu_transport(
         self, gaps: NDArray[np.float64]
@@ -320,7 +267,7 @@ class TorchSheafLaplacian:
             (M, K, K) complex128 tensor on GPU -- the transport matrices.
         """
         M = len(gaps)
-        K = self.K
+        K = self._K
         device = self.device
         dtype = torch.cdouble
 
@@ -328,47 +275,49 @@ class TorchSheafLaplacian:
             return torch.empty(0, K, K, dtype=dtype, device=device)
 
         # Step 1: Get bases from builder (CPU, cached after first call)
-        bases_np = self.builder.build_superposition_bases()  # (P, K, K) float64
+        bases_np = self._builder.build_superposition_bases()  # (P, K, K)
         P_count = bases_np.shape[0]
 
         if P_count == 0:
-            return torch.eye(K, dtype=dtype, device=device).unsqueeze(0).expand(M, K, K).clone()
+            return torch.eye(
+                K, dtype=dtype, device=device,
+            ).unsqueeze(0).expand(M, K, K).clone()
 
         # Ensure log_primes is available on the builder
-        if self.builder._log_primes is None:
-            self.builder._log_primes = np.array(
-                [np.log(p) for p in self.builder.primes]
+        if self._builder._log_primes is None:
+            self._builder._log_primes = np.array(
+                [np.log(p) for p in self._builder.primes]
             )
-        log_primes_np = self.builder._log_primes  # (P,) float64
+        log_primes_np = self._builder._log_primes  # (P,)
 
         # Step 2: Move to GPU
-        bases_gpu = torch.tensor(bases_np, dtype=dtype, device=device)       # (P, K, K)
-        gaps_gpu = torch.tensor(gaps, dtype=torch.double, device=device)     # (M,)
-        log_primes_gpu = torch.tensor(log_primes_np, dtype=torch.double, device=device)  # (P,)
+        bases_gpu = torch.tensor(bases_np, dtype=dtype, device=device)
+        gaps_gpu = torch.tensor(gaps, dtype=torch.double, device=device)
+        log_primes_gpu = torch.tensor(
+            log_primes_np, dtype=torch.double, device=device,
+        )
 
         # Step 3: Phase matrix: (M, P) complex
         phases = torch.exp(
             1j * gaps_gpu[:, None] * log_primes_gpu[None, :]
-        )  # (M, P) cdouble
+        )
 
         # Step 4: Generator batch via einsum: (M, K, K) complex
         A_batch = torch.einsum('ep,pij->eij', phases, bases_gpu)
 
         # Step 5: Frobenius normalization per generator
-        norms = torch.linalg.norm(
-            A_batch.reshape(M, -1), dim=1
-        )  # (M,) real
+        norms = torch.linalg.norm(A_batch.reshape(M, -1), dim=1)
         mask = norms > 0
         A_batch[mask] /= norms[mask, None, None]
 
         # Step 6: GPU batched eigendecomposition
-        eigenvals, P_mat = torch.linalg.eig(A_batch)  # (M, K), (M, K, K) complex
+        eigenvals, P_mat = torch.linalg.eig(A_batch)
 
         # Step 7: GPU batched inverse
-        P_inv = torch.linalg.inv(P_mat)  # (M, K, K) complex
+        P_inv = torch.linalg.inv(P_mat)
 
         # Step 8: Compute U = P @ diag(exp(i * eigenvals)) @ P_inv
-        exp_eigenvals = torch.exp(1j * eigenvals)  # (M, K) complex
+        exp_eigenvals = torch.exp(1j * eigenvals)
         result = torch.einsum('mik,mk,mkj->mij', P_mat, exp_eigenvals, P_inv)
 
         # Step 9: Check for defective matrices via condition number estimate
@@ -379,32 +328,11 @@ class TorchSheafLaplacian:
 
         n_defective = int(defective.sum().item())
         if n_defective > 0:
-            # Fallback to matrix exponential for defective matrices
             defective_indices = torch.where(defective)[0]
             for idx in defective_indices:
                 result[idx] = torch.matrix_exp(1j * A_batch[idx])
 
         return result
-
-    def _cpu_transport(
-        self, gaps: NDArray[np.float64]
-    ) -> NDArray[np.complex128]:
-        """CPU transport fallback using the builder's batch methods.
-
-        Used for non-superposition transport modes (resonant, fe) which
-        rely on per-prime eigendecompositions that are cheap enough on CPU.
-        """
-        if self.transport_mode == "superposition":
-            return self.builder.batch_transport_superposition(gaps)
-        elif self.transport_mode == "fe":
-            return self.builder.batch_transport_fe(gaps)
-        elif self.transport_mode == "resonant":
-            return self.builder.batch_transport_resonant(gaps)
-        else:
-            raise ValueError(
-                f"Unknown transport_mode {self.transport_mode!r}. "
-                "Must be 'superposition', 'fe', or 'resonant'."
-            )
 
     def build_matrix(self, epsilon: float):
         """Assemble the N*K x N*K Laplacian as a torch sparse CSR tensor.
@@ -423,22 +351,22 @@ class TorchSheafLaplacian:
         """
         i_idx_cpu, j_idx_cpu, gaps = self.build_edge_list(epsilon)
         M = len(gaps)
-        dim = self.N * self.K
+        K = self._K
+        dim = self._N * K
         device = self.device
         dtype = torch.cdouble
 
         if M == 0:
-            # Return empty sparse CSR tensor
             crow = torch.zeros(dim + 1, dtype=torch.int64, device=device)
             col = torch.empty(0, dtype=torch.int64, device=device)
             vals = torch.empty(0, dtype=dtype, device=device)
             return torch.sparse_csr_tensor(crow, col, vals, size=(dim, dim))
 
         # 1. Compute transport matrices
-        if self.transport_mode == "superposition":
+        if self._transport_mode == "superposition":
             U_all = self.gpu_transport(gaps)  # (M, K, K) on GPU
         else:
-            U_all_np = self._cpu_transport(gaps)
+            U_all_np = self._compute_transport(gaps)
             U_all = torch.tensor(U_all_np, dtype=dtype, device=device)
 
         U_dagger = U_all.conj().transpose(1, 2)  # (M, K, K)
@@ -448,40 +376,36 @@ class TorchSheafLaplacian:
         j_idx = torch.tensor(j_idx_cpu, dtype=torch.int64, device=device)
 
         # 3. Block expansion -- build COO indices for all K x K blocks
-        K = self.K
         k_range = torch.arange(K, device=device)
-        # Meshgrid offsets for K x K blocks (row_offset, col_offset)
         r_offset, c_offset = torch.meshgrid(k_range, k_range, indexing='ij')
-        # Broadcast: (1, K, K) for adding to base indices
-        r_off = r_offset.unsqueeze(0)  # (1, K, K)
-        c_off = c_offset.unsqueeze(0)  # (1, K, K)
+        r_off = r_offset.unsqueeze(0)
+        c_off = c_offset.unsqueeze(0)
 
-        # Base row/col coordinates for each edge's blocks
-        row_base_i = i_idx * K  # (M,)
-        col_base_j = j_idx * K  # (M,)
-        row_base_j = j_idx * K  # (M,)
-        col_base_i = i_idx * K  # (M,)
+        row_base_i = i_idx * K
+        col_base_j = j_idx * K
+        row_base_j = j_idx * K
+        col_base_i = i_idx * K
 
         # (i, j) off-diagonal blocks: -U_dagger
-        row_ij = row_base_i[:, None, None] + r_off  # (M, K, K)
-        col_ij = col_base_j[:, None, None] + c_off  # (M, K, K)
-        data_ij = -U_dagger                          # (M, K, K)
+        row_ij = row_base_i[:, None, None] + r_off
+        col_ij = col_base_j[:, None, None] + c_off
+        data_ij = -U_dagger
 
         # (j, i) off-diagonal blocks: -U
-        row_ji = row_base_j[:, None, None] + r_off   # (M, K, K)
-        col_ji = col_base_i[:, None, None] + c_off   # (M, K, K)
-        data_ji = -U_all                              # (M, K, K)
+        row_ji = row_base_j[:, None, None] + r_off
+        col_ji = col_base_i[:, None, None] + c_off
+        data_ji = -U_all
 
         # (i, i) diagonal blocks: U_dagger @ U
-        row_ii = row_base_i[:, None, None] + r_off    # (M, K, K)
-        col_ii = col_base_i[:, None, None] + c_off    # (M, K, K)
-        data_ii = torch.bmm(U_dagger, U_all)          # (M, K, K)
+        row_ii = row_base_i[:, None, None] + r_off
+        col_ii = col_base_i[:, None, None] + c_off
+        data_ii = torch.bmm(U_dagger, U_all)
 
         # (j, j) diagonal blocks: I_K
-        row_jj = row_base_j[:, None, None] + r_off    # (M, K, K)
-        col_jj = col_base_j[:, None, None] + c_off    # (M, K, K)
+        row_jj = row_base_j[:, None, None] + r_off
+        col_jj = col_base_j[:, None, None] + c_off
         I_K = torch.eye(K, dtype=dtype, device=device)
-        data_jj = I_K.unsqueeze(0).expand(M, K, K).clone()  # (M, K, K)
+        data_jj = I_K.unsqueeze(0).expand(M, K, K).clone()
 
         # 4. Flatten all blocks into COO format
         all_rows = torch.cat([
@@ -498,7 +422,7 @@ class TorchSheafLaplacian:
         ])
 
         # 5. Build COO tensor -- coalesce() sums duplicate diagonal entries
-        indices = torch.stack([all_rows, all_cols])  # (2, nnz)
+        indices = torch.stack([all_rows, all_cols])
         L_coo = torch.sparse_coo_tensor(
             indices, all_data, size=(dim, dim), dtype=dtype, device=device
         ).coalesce()
@@ -543,14 +467,10 @@ class TorchSheafLaplacian:
             try:
                 L_dense = L_csr.to_dense()
                 eigs_t = torch.linalg.eigvalsh(L_dense)
-                eigs = eigs_t.real.cpu().numpy()
-                eigs = np.sort(eigs)
-                eigs = np.maximum(eigs[:k], 0.0)
-                if len(eigs) < k:
-                    eigs = np.concatenate([eigs, np.zeros(k - len(eigs))])
-                return eigs
+                return self._postprocess_eigenvalues(
+                    eigs_t.real.cpu().numpy(), k,
+                )
             except Exception:
-                # Fall through to CPU dense
                 pass
 
         eigs = None
@@ -568,15 +488,12 @@ class TorchSheafLaplacian:
         if eigs is None:
             try:
                 L_dense = L_csr.to_dense().cpu().numpy()
-                eigs = np.sort(np.linalg.eigvalsh(L_dense).real)
-                eigs = np.maximum(eigs[:k], 0.0)
+                eigs = np.linalg.eigvalsh(L_dense)
             except Exception as e:
                 print(f"CPU dense fallback failed: {e}")
-                eigs = np.zeros(k, dtype=np.float64)
+                return np.zeros(k, dtype=np.float64)
 
-        if len(eigs) < k:
-            eigs = np.concatenate([eigs, np.zeros(k - len(eigs))])
-        return eigs[:k]
+        return self._postprocess_eigenvalues(eigs, k)
 
     def spectral_sum(self, epsilon: float, k: int = 100) -> float:
         """Compute the sum of the smallest k eigenvalues.

@@ -17,10 +17,11 @@ import scipy.sparse as sp
 from numpy.typing import NDArray
 from scipy.sparse.linalg import eigsh
 
+from atft.topology.base_sheaf_laplacian import BaseSheafLaplacian
 from atft.topology.transport_maps import TransportMapBuilder
 
 
-class SparseSheafLaplacian:
+class SparseSheafLaplacian(BaseSheafLaplacian):
     """BSR sparse sheaf Laplacian with C^K vector fibers.
 
     The sheaf Laplacian L = delta_0^dagger delta_0 where
@@ -47,86 +48,8 @@ class SparseSheafLaplacian:
         transport_mode: str = "superposition",
         normalize: bool = True,
     ) -> None:
-        self._builder = builder
-        self._zeros = np.sort(zeros.ravel())
-        self._N = len(self._zeros)
-        self._K = builder.K
-        self._transport_mode = transport_mode
+        super().__init__(builder, zeros, transport_mode)
         self._normalize = normalize
-
-    @property
-    def N(self) -> int:
-        return self._N
-
-    @property
-    def K(self) -> int:
-        return self._K
-
-    def build_edge_list(
-        self, epsilon: float
-    ) -> tuple[NDArray[np.int64], NDArray[np.int64], NDArray[np.float64]]:
-        """Discover all edges in the 1D Rips complex at scale epsilon.
-
-        Uses binary search on sorted zeros for O(N log N + |E|) complexity.
-
-        Returns:
-            (i_idx, j_idx, gaps) where each is a 1D array of length |E|.
-            All edges satisfy i < j and gaps[e] = zeros[j] - zeros[i] <= epsilon.
-        """
-        zeros = self._zeros
-        N = self._N
-
-        if epsilon <= 0 or N < 2:
-            return (
-                np.array([], dtype=np.int64),
-                np.array([], dtype=np.int64),
-                np.array([], dtype=np.float64),
-            )
-
-        i_parts: list[NDArray[np.int64]] = []
-        j_parts: list[NDArray[np.int64]] = []
-
-        for i in range(N - 1):
-            max_val = zeros[i] + epsilon
-            # Binary search for rightmost j where zeros[j] <= max_val
-            j_right = int(np.searchsorted(zeros, max_val, side='right'))
-            j_right = min(j_right, N)
-            if i + 1 < j_right:
-                js = np.arange(i + 1, j_right, dtype=np.int64)
-                i_parts.append(np.full(len(js), i, dtype=np.int64))
-                j_parts.append(js)
-
-        if i_parts:
-            i_idx = np.concatenate(i_parts)
-            j_idx = np.concatenate(j_parts)
-        else:
-            i_idx = np.array([], dtype=np.int64)
-            j_idx = np.array([], dtype=np.int64)
-
-        gaps = (
-            self._zeros[j_idx] - self._zeros[i_idx]
-            if len(i_idx) > 0
-            else np.array([], dtype=np.float64)
-        )
-        return i_idx, j_idx, gaps
-
-    def _compute_transport(
-        self, gaps: NDArray[np.float64]
-    ) -> NDArray[np.complex128]:
-        """Compute transport matrices for all edges."""
-        if self._transport_mode == "superposition":
-            return self._builder.batch_transport_superposition(
-                gaps, normalize=self._normalize
-            )
-        elif self._transport_mode == "fe":
-            return self._builder.batch_transport_fe(gaps)
-        elif self._transport_mode == "resonant":
-            return self._builder.batch_transport_resonant(gaps)
-        else:
-            raise ValueError(
-                f"Unknown transport_mode {self._transport_mode!r}. "
-                "Must be 'superposition', 'fe', or 'resonant'."
-            )
 
     def build_matrix(self, epsilon: float) -> sp.csr_matrix:
         """Assemble the N*K x N*K sparse sheaf Laplacian.
@@ -148,7 +71,7 @@ class SparseSheafLaplacian:
             return sp.csr_matrix((dim, dim), dtype=np.complex128)
 
         # Compute all transport matrices: (M, K, K)
-        U_all = self._compute_transport(gaps)
+        U_all = self._compute_transport(gaps, normalize=self._normalize)
         Uh_all = np.conj(np.transpose(U_all, (0, 2, 1)))  # U†: (M, K, K)
 
         # --- Build diagonal blocks: (N, K, K) ---
@@ -229,51 +152,35 @@ class SparseSheafLaplacian:
 
         # If matrix is small enough, use dense eigensolver
         if dim <= 500:
-            eigs = np.sort(np.linalg.eigvalsh(L.toarray()).real)
-            eigs = np.maximum(eigs[:k], 0.0)
-            if len(eigs) < k:
-                eigs = np.concatenate([eigs, np.zeros(k - len(eigs))])
-            return eigs
+            return self._postprocess_eigenvalues(
+                np.linalg.eigvalsh(L.toarray()), k,
+            )
 
         # Try shift-invert (targets eigenvalues near sigma)
         try:
             eigs, _ = eigsh(L, k=k_actual, sigma=1e-8, which='LM', tol=1e-6)
-            eigs = np.sort(eigs.real)
-            # Clamp tiny negatives from numerical noise
-            eigs = np.maximum(eigs, 0.0)
+            return self._postprocess_eigenvalues(eigs, k)
         except Exception:
-            # Fallback 1: LOBPCG — iterative, no LU factorization, low memory
-            try:
-                from scipy.sparse.linalg import lobpcg
-                rng = np.random.default_rng(42)
-                X0 = rng.standard_normal((dim, k_actual)) + 1j * rng.standard_normal((dim, k_actual))
-                eigs_raw, _ = lobpcg(L, X0, largest=False, tol=1e-6, maxiter=500, verbosityLevel=0)
-                eigs = np.sort(eigs_raw.real)
-                eigs = np.maximum(eigs, 0.0)
-            except Exception:
-                # Fallback 2: standard eigsh targeting smallest eigenvalues
-                try:
-                    eigs, _ = eigsh(L, k=k_actual, which='SM', tol=1e-6)
-                    eigs = np.sort(eigs.real)
-                    eigs = np.maximum(eigs, 0.0)
-                except Exception:
-                    # Last resort: dense
-                    eigs = np.sort(np.linalg.eigvalsh(L.toarray()).real)
-                    eigs = np.maximum(eigs[:k], 0.0)
-                    if len(eigs) < k:
-                        eigs = np.concatenate([eigs, np.zeros(k - len(eigs))])
-                    return eigs
+            pass
 
-        # Pad with zeros if we got fewer than k
-        if len(eigs) < k:
-            eigs = np.concatenate([eigs, np.zeros(k - len(eigs))])
-        return eigs[:k]
+        # Fallback 1: LOBPCG
+        try:
+            from scipy.sparse.linalg import lobpcg
+            rng = np.random.default_rng(42)
+            X0 = rng.standard_normal((dim, k_actual)) + 1j * rng.standard_normal((dim, k_actual))
+            eigs_raw, _ = lobpcg(L, X0, largest=False, tol=1e-6, maxiter=500, verbosityLevel=0)
+            return self._postprocess_eigenvalues(eigs_raw, k)
+        except Exception:
+            pass
 
-    def spectral_sum(self, epsilon: float, k: int = 100) -> float:
-        """Sum of the k smallest eigenvalues (primary metric).
+        # Fallback 2: standard eigsh targeting smallest eigenvalues
+        try:
+            eigs, _ = eigsh(L, k=k_actual, which='SM', tol=1e-6)
+            return self._postprocess_eigenvalues(eigs, k)
+        except Exception:
+            pass
 
-        This is the total "constraint energy" in the near-kernel of the
-        sheaf Laplacian. Lower values indicate more globally consistent
-        sections (stronger topological signal).
-        """
-        return float(np.sum(self.smallest_eigenvalues(epsilon, k)))
+        # Last resort: dense
+        return self._postprocess_eigenvalues(
+            np.linalg.eigvalsh(L.toarray()), k,
+        )

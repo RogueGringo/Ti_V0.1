@@ -192,7 +192,7 @@ class TestGPUTransport:
 # ---------------------------------------------------------------------------
 
 class TestCPUTransport:
-    """Tests for _cpu_transport fallback paths."""
+    """Tests for _compute_transport (inherited from BaseSheafLaplacian)."""
 
     def test_fe_matches_builder(self):
         builder = TransportMapBuilder(K=6, sigma=0.5)
@@ -200,7 +200,7 @@ class TestCPUTransport:
         lap = TorchSheafLaplacian(builder, zeros, transport_mode="fe", device="cpu")
 
         gaps = np.array([1.0, 2.0])
-        U = lap._cpu_transport(gaps)
+        U = lap._compute_transport(gaps)
         U_ref = builder.batch_transport_fe(gaps)
         npt.assert_allclose(U, U_ref, atol=1e-14)
 
@@ -210,7 +210,7 @@ class TestCPUTransport:
         lap = TorchSheafLaplacian(builder, zeros, transport_mode="resonant", device="cpu")
 
         gaps = np.array([1.0, 2.0])
-        U = lap._cpu_transport(gaps)
+        U = lap._compute_transport(gaps)
         U_ref = builder.batch_transport_resonant(gaps)
         npt.assert_allclose(U, U_ref, atol=1e-14)
 
@@ -219,7 +219,7 @@ class TestCPUTransport:
         zeros = np.array([0.0, 1.0])
         lap = TorchSheafLaplacian(builder, zeros, transport_mode="bogus", device="cpu")
         with pytest.raises(ValueError, match="Unknown transport_mode"):
-            lap._cpu_transport(np.array([1.0]))
+            lap._compute_transport(np.array([1.0]))
 
 
 # ---------------------------------------------------------------------------
@@ -451,7 +451,7 @@ class TestInitialization:
         builder = TransportMapBuilder(K=3, sigma=0.5)
         zeros = np.array([0.0, 1.0])
         lap = TorchSheafLaplacian(builder, zeros, transport_mode="fe", device="cpu")
-        assert lap.transport_mode == "fe"
+        assert lap._transport_mode == "fe"
 
     def test_different_sigma_different_result(self):
         """Different sigma should produce different spectral sums."""
