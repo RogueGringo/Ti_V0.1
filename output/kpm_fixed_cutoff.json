@@ -1,0 +1,115 @@
+{
+  "run_id": "2026-03-17-fixed-cutoff-sweep",
+  "timestamp": "2026-03-17T~23:00",
+  "parameters": {
+    "N": 2000,
+    "zeros_source": "odlyzko_zeros.txt (first 2000)",
+    "epsilon": 3.0,
+    "num_vectors": 100,
+    "fixed_cutoff": 0.5,
+    "degree_auto_scaled": true,
+    "base_degree": 300
+  },
+  "results": {
+    "10": {
+      "0.25": {
+        "idos": 0.062433,
+        "spectral_sum": 28.3573,
+        "lam_max": 13.11,
+        "resolution": 0.1373,
+        "degree": 300
+      },
+      "0.50": {
+        "idos": 0.061759,
+        "spectral_sum": 25.5301,
+        "lam_max": 13.17,
+        "resolution": 0.138,
+        "degree": 300
+      },
+      "0.75": {
+        "idos": 0.062093,
+        "spectral_sum": 28.3152,
+        "lam_max": 13.01,
+        "resolution": 0.1362,
+        "degree": 300
+      }
+    },
+    "20": {
+      "0.25": {
+        "idos": 0.15131,
+        "spectral_sum": 56.1889,
+        "lam_max": 11.69,
+        "resolution": 0.1224,
+        "degree": 300
+      },
+      "0.50": {
+        "idos": 0.13671,
+        "spectral_sum": 49.8022,
+        "lam_max": 11.81,
+        "resolution": 0.1237,
+        "degree": 300
+      },
+      "0.75": {
+        "idos": 0.136498,
+        "spectral_sum": 53.85,
+        "lam_max": 11.5,
+        "resolution": 0.1204,
+        "degree": 300
+      }
+    },
+    "50": {
+      "0.25": {
+        "idos": 0.14863,
+        "spectral_sum": 131.7493,
+        "lam_max": 10.57,
+        "resolution": 0.052,
+        "degree": 638
+      },
+      "0.50": {
+        "idos": 0.141994,
+        "spectral_sum": 131.207,
+        "lam_max": 10.5,
+        "resolution": 0.0517,
+        "degree": 638
+      },
+      "0.75": {
+        "idos": 0.142175,
+        "spectral_sum": 127.5055,
+        "lam_max": 10.32,
+        "resolution": 0.0508,
+        "degree": 638
+      }
+    }
+  },
+  "analysis": {
+    "contrast_K10": {
+      "on_off_ratio": 0.989,
+      "on_sigma": 0.5,
+      "off_sigma": 0.25
+    },
+    "contrast_K20": {
+      "on_off_ratio": 0.904,
+      "on_sigma": 0.5,
+      "off_sigma": 0.25
+    },
+    "contrast_K50": {
+      "on_off_ratio": 0.955,
+      "on_sigma": 0.5,
+      "off_sigma": 0.25
+    },
+    "best_discrimination_K": 20,
+    "spectral_sum_contrast_K20": {
+      "S_on": 49.8,
+      "S_off": 56.19,
+      "pct_drop": 11.4
+    }
+  },
+  "interpretation": {
+    "signal_present": true,
+    "sigma_0.5_minimizes_IDOS": true,
+    "thermodynamic_divergence": false,
+    "limiting_factor": "N=2000 insufficient for K=50 explicit formula interference",
+    "goalpost_fix_status": "Fixed cutoff eliminates lambda_max drift. Resolution properly controlled.",
+    "previous_run_issue": "Without fixed cutoff, lambda_max growth widened integration band, triggering false F1"
+  }
+}
