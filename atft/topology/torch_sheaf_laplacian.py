@@ -385,7 +385,7 @@ class TorchSheafLaplacian(BaseSheafLaplacian):
 
         return result
 
-    def build_matrix(self, epsilon: float):
+    def build_matrix(self, epsilon: float, edge_batch_size: int = 0):
         """Assemble the N*K x N*K Laplacian as a torch sparse CSR tensor.
 
         Block structure per edge (i -> j) with transport U:
@@ -396,6 +396,13 @@ class TorchSheafLaplacian(BaseSheafLaplacian):
 
         Duplicate diagonal entries from different edges are automatically
         summed via torch.sparse_coo_tensor coalescing.
+
+        Args:
+            epsilon: Rips complex scale parameter.
+            edge_batch_size: Process edges in batches of this size to
+                limit peak VRAM. 0 = auto (all edges at once if they
+                fit, otherwise K*K-adaptive batching). Values > 0 force
+                batching regardless of VRAM pressure.
 
         Returns:
             Torch sparse CSR tensor (complex128) on self.device.
@@ -413,20 +420,66 @@ class TorchSheafLaplacian(BaseSheafLaplacian):
             vals = torch.empty(0, dtype=dtype, device=device)
             return torch.sparse_csr_tensor(crow, col, vals, size=(dim, dim))
 
+        # Determine batch size: auto-select based on VRAM budget
+        if edge_batch_size <= 0:
+            # Estimate VRAM for unbatched assembly. The COO build phase
+            # allocates ~10x M*K^2*16 bytes due to intermediates (transport
+            # U + U†, 4 block-type index/data tensors, final concat, COO
+            # tensor, coalesce copy). Use 10x as the multiplier.
+            unbatched_bytes = 10 * M * K * K * 16
+            if device.type == "cuda":
+                free_mem = torch.cuda.mem_get_info(device)[0]
+                # Use at most 50% of free VRAM for assembly (leave room
+                # for Lanczos vectors after assembly completes)
+                budget = int(free_mem * 0.5)
+            else:
+                budget = 8 * 1024**3  # 8 GB for CPU
+            if unbatched_bytes < budget:
+                edge_batch_size = M  # fits in one shot
+            else:
+                # Choose batch size that fits within budget
+                per_edge = 10 * K * K * 16
+                edge_batch_size = max(100, budget // per_edge)
+
+        if edge_batch_size >= M:
+            # Original unbatched path -- fast for small M
+            return self._build_matrix_unbatched(
+                i_idx_cpu, j_idx_cpu, gaps, dim, device, dtype,
+            )
+
+        # Batched assembly: process edges in chunks, accumulate COO on CPU
+        return self._build_matrix_batched(
+            i_idx_cpu, j_idx_cpu, gaps, dim, device, dtype,
+            edge_batch_size,
+        )
+
+    def _build_matrix_unbatched(
+        self,
+        i_idx_cpu: np.ndarray,
+        j_idx_cpu: np.ndarray,
+        gaps: np.ndarray,
+        dim: int,
+        device,
+        dtype,
+    ):
+        """Original all-at-once assembly (no batching)."""
+        M = len(gaps)
+        K = self._K
+
         # 1. Compute transport matrices
         if self._transport_mode == "superposition":
-            U_all = self.gpu_transport(gaps)  # (M, K, K) on GPU
+            U_all = self.gpu_transport(gaps)
         else:
             U_all_np = self._compute_transport(gaps)
             U_all = torch.tensor(U_all_np, dtype=dtype, device=device)
 
-        U_dagger = U_all.conj().transpose(1, 2)  # (M, K, K)
+        U_dagger = U_all.conj().transpose(1, 2)
 
         # 2. Move indices to GPU
         i_idx = torch.tensor(i_idx_cpu, dtype=torch.int64, device=device)
         j_idx = torch.tensor(j_idx_cpu, dtype=torch.int64, device=device)
 
-        # 3. Block expansion -- build COO indices for all K x K blocks
+        # 3. Block expansion
         k_range = torch.arange(K, device=device)
         r_offset, c_offset = torch.meshgrid(k_range, k_range, indexing='ij')
         r_off = r_offset.unsqueeze(0)
@@ -437,22 +490,18 @@ class TorchSheafLaplacian(BaseSheafLaplacian):
         row_base_j = j_idx * K
         col_base_i = i_idx * K
 
-        # (i, j) off-diagonal blocks: -U_dagger
         row_ij = row_base_i[:, None, None] + r_off
         col_ij = col_base_j[:, None, None] + c_off
         data_ij = -U_dagger
 
-        # (j, i) off-diagonal blocks: -U
         row_ji = row_base_j[:, None, None] + r_off
         col_ji = col_base_i[:, None, None] + c_off
         data_ji = -U_all
 
-        # (i, i) diagonal blocks: U_dagger @ U
         row_ii = row_base_i[:, None, None] + r_off
         col_ii = col_base_i[:, None, None] + c_off
         data_ii = torch.bmm(U_dagger, U_all)
 
-        # (j, j) diagonal blocks: I_K
         row_jj = row_base_j[:, None, None] + r_off
         col_jj = col_base_j[:, None, None] + c_off
         I_K = torch.eye(K, dtype=dtype, device=device)
@@ -480,6 +529,162 @@ class TorchSheafLaplacian(BaseSheafLaplacian):
 
         # 6. Convert to CSR for efficient SpMV in Lanczos
         L_csr = L_coo.to_sparse_csr()
+
+        return L_csr
+
+    def _build_matrix_batched(
+        self,
+        i_idx_cpu: np.ndarray,
+        j_idx_cpu: np.ndarray,
+        gaps: np.ndarray,
+        dim: int,
+        device,
+        dtype,
+        batch_size: int,
+    ):
+        """VRAM-safe batched assembly: process edges in chunks.
+
+        For each batch of B edges:
+          1. Compute transport matrices on GPU  (B, K, K)
+          2. Build COO triplets for all 4 block types
+          3. Move triplets to CPU accumulator
+          4. Free GPU transport tensors
+
+        After all batches, concatenate CPU accumulators, move to GPU,
+        coalesce, and convert to CSR.
+        """
+        M = len(gaps)
+        K = self._K
+
+        # CPU accumulators for COO triplets
+        all_rows_cpu: list[torch.Tensor] = []
+        all_cols_cpu: list[torch.Tensor] = []
+        all_data_cpu: list[torch.Tensor] = []
+
+        # Precompute k_range offsets (small, stays on GPU)
+        k_range = torch.arange(K, device=device)
+        r_offset, c_offset = torch.meshgrid(k_range, k_range, indexing='ij')
+        r_off = r_offset.unsqueeze(0)  # (1, K, K)
+        c_off = c_offset.unsqueeze(0)
+        I_K = torch.eye(K, dtype=dtype, device=device)
+
+        n_batches = (M + batch_size - 1) // batch_size
+
+        for b in range(n_batches):
+            start = b * batch_size
+            end = min(start + batch_size, M)
+            B = end - start
+
+            # Slice this batch
+            gaps_b = gaps[start:end]
+            i_b = i_idx_cpu[start:end]
+            j_b = j_idx_cpu[start:end]
+
+            # 1. Transport on GPU
+            if self._transport_mode == "superposition":
+                U_b = self.gpu_transport(gaps_b)  # (B, K, K) on GPU
+            else:
+                U_b_np = self._compute_transport(gaps_b)
+                U_b = torch.tensor(U_b_np, dtype=dtype, device=device)
+
+            U_dag_b = U_b.conj().transpose(1, 2)
+
+            # 2. Indices on GPU
+            i_idx_t = torch.tensor(i_b, dtype=torch.int64, device=device)
+            j_idx_t = torch.tensor(j_b, dtype=torch.int64, device=device)
+
+            row_base_i = i_idx_t * K
+            col_base_j = j_idx_t * K
+            row_base_j = j_idx_t * K
+            col_base_i = i_idx_t * K
+
+            # 3. Build COO triplets for 4 block types
+            # (i,j) blocks: -U†
+            rows_ij = (row_base_i[:, None, None] + r_off).reshape(-1)
+            cols_ij = (col_base_j[:, None, None] + c_off).reshape(-1)
+            data_ij = (-U_dag_b).reshape(-1)
+
+            # (j,i) blocks: -U
+            rows_ji = (row_base_j[:, None, None] + r_off).reshape(-1)
+            cols_ji = (col_base_i[:, None, None] + c_off).reshape(-1)
+            data_ji = (-U_b).reshape(-1)
+
+            # (i,i) blocks: U† @ U
+            rows_ii = (row_base_i[:, None, None] + r_off).reshape(-1)
+            cols_ii = (col_base_i[:, None, None] + c_off).reshape(-1)
+            data_ii = torch.bmm(U_dag_b, U_b).reshape(-1)
+
+            # (j,j) blocks: I_K
+            rows_jj = (row_base_j[:, None, None] + r_off).reshape(-1)
+            cols_jj = (col_base_j[:, None, None] + c_off).reshape(-1)
+            data_jj = I_K.unsqueeze(0).expand(B, K, K).reshape(-1)
+
+            # Concatenate this batch's triplets
+            batch_rows = torch.cat([rows_ij, rows_ji, rows_ii, rows_jj])
+            batch_cols = torch.cat([cols_ij, cols_ji, cols_ii, cols_jj])
+            batch_data = torch.cat([data_ij, data_ji, data_ii, data_jj])
+
+            # 4. Move to CPU and accumulate
+            all_rows_cpu.append(batch_rows.cpu())
+            all_cols_cpu.append(batch_cols.cpu())
+            all_data_cpu.append(batch_data.cpu())
+
+            # 5. Free GPU memory from this batch
+            del U_b, U_dag_b, i_idx_t, j_idx_t
+            del rows_ij, cols_ij, data_ij
+            del rows_ji, cols_ji, data_ji
+            del rows_ii, cols_ii, data_ii
+            del rows_jj, cols_jj, data_jj
+            del batch_rows, batch_cols, batch_data
+            if device.type == "cuda":
+                torch.cuda.empty_cache()
+
+        # 6. Coalesce on CPU via scipy (sums duplicate diagonal entries)
+        #    then transfer the compact CSR to GPU. This avoids moving the
+        #    full raw COO (~200M entries for K=100) onto the GPU.
+        import scipy.sparse as sp
+
+        # Concatenate and release each list immediately to halve peak RAM.
+        # Without this, the accumulated lists (~14 GB at K=200) coexist
+        # with the concatenated arrays, exceeding 32 GB RAM.
+        rows_cat = torch.cat(all_rows_cpu)
+        del all_rows_cpu
+        rows_np = rows_cat.numpy().astype(np.int64)
+        del rows_cat
+
+        cols_cat = torch.cat(all_cols_cpu)
+        del all_cols_cpu
+        cols_np = cols_cat.numpy().astype(np.int64)
+        del cols_cat
+
+        data_cat = torch.cat(all_data_cpu)
+        del all_data_cpu
+        data_np = data_cat.numpy().astype(np.complex128)
+        del data_cat
+
+        # scipy csr_matrix automatically sums duplicate (row, col) entries
+        L_scipy = sp.csr_matrix((data_np, (rows_np, cols_np)), shape=(dim, dim))
+
+        del rows_np, cols_np, data_np
+
+        # Transfer compact CSR to GPU
+        crow = torch.tensor(
+            L_scipy.indptr, dtype=torch.int64, device=device,
+        )
+        col_idx = torch.tensor(
+            L_scipy.indices.astype(np.int64), dtype=torch.int64, device=device,
+        )
+        vals = torch.tensor(
+            L_scipy.data, dtype=dtype, device=device,
+        )
+
+        del L_scipy
+
+        L_csr = torch.sparse_csr_tensor(crow, col_idx, vals, size=(dim, dim))
+
+        del crow, col_idx, vals
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
 
         return L_csr
 
