@@ -7,6 +7,58 @@
 (function () {
   'use strict';
 
+  /* ─── Chart Data (baked from experiment results, eps=3.0) ─── */
+  var CHART_DATA = {
+    "K100": {
+      "Zeta": {
+        "0.250": 12.581465, "0.350": 12.482372, "0.400": 12.486117,
+        "0.440": 12.489708, "0.460": 12.488384, "0.480": 12.485043,
+        "0.490": 12.482742, "0.500": 12.480021, "0.510": 12.476845,
+        "0.520": 12.473185, "0.540": 12.464329, "0.560": 12.453212,
+        "0.600": 12.4245, "0.650": 12.384081, "0.750": 12.429955
+      },
+      "Random": {
+        "0.250": 24.452096, "0.350": 24.278636, "0.400": 24.217621,
+        "0.440": 24.212372, "0.460": 24.196412, "0.480": 24.187745,
+        "0.490": 24.191457, "0.500": 24.195158, "0.510": 24.196099,
+        "0.520": 24.193428, "0.540": 24.177981, "0.560": 24.153654,
+        "0.600": 24.110624, "0.650": 24.106577, "0.750": 24.161106
+      },
+      "GUE": {
+        "0.250": 15.627424, "0.350": 15.52271, "0.400": 15.522373,
+        "0.440": 15.524901, "0.460": 15.525166, "0.480": 15.525402,
+        "0.490": 15.525902, "0.500": 15.526629, "0.510": 15.527118,
+        "0.520": 15.526672, "0.540": 15.51998, "0.560": 15.497535,
+        "0.600": 15.453711, "0.650": 15.426708, "0.750": 15.418362
+      }
+    },
+    "K200": {
+      "Zeta": {
+        "0.440": 11.796721, "0.480": 11.787438, "0.500": 11.784063,
+        "0.520": 11.780065, "0.560": 11.773014
+      },
+      "GUE": {
+        "0.440": 15.000902, "0.480": 15.00581, "0.500": 15.003759,
+        "0.520": 14.996844, "0.560": 14.96691
+      }
+    }
+  };
+
+  /* ─── Canvas Color Resolution ─── */
+  var CHART_COLORS = {};
+  function resolveChartColors() {
+    var cs = getComputedStyle(document.documentElement);
+    CHART_COLORS.gold = cs.getPropertyValue('--color-primary').trim() || '#d08a28';
+    CHART_COLORS.teal = cs.getPropertyValue('--color-teal').trim() || '#45a8b0';
+    CHART_COLORS.gray = cs.getPropertyValue('--color-text-faint').trim() || '#544f3e';
+    CHART_COLORS.bg = cs.getPropertyValue('--color-bg').trim() || '#0f0d08';
+    CHART_COLORS.surface = cs.getPropertyValue('--color-surface').trim() || '#16140d';
+    CHART_COLORS.text = cs.getPropertyValue('--color-text').trim() || '#d6d0be';
+    CHART_COLORS.textMuted = cs.getPropertyValue('--color-text-muted').trim() || '#817a66';
+    CHART_COLORS.border = cs.getPropertyValue('--color-border').trim() || '#35311e';
+  }
+  resolveChartColors();
+
   /* ─── Theme Toggle ─── */
   const root = document.documentElement;
   const toggle = document.getElementById('themeToggle');
@@ -28,6 +80,10 @@
       theme = theme === 'dark' ? 'light' : 'dark';
       root.setAttribute('data-theme', theme);
       updateToggleIcon();
+      resolveChartColors();
+      if (typeof redrawSigmaSweep === 'function') redrawSigmaSweep();
+      if (typeof redrawPremiumChart === 'function') redrawPremiumChart();
+      if (typeof restartParticles === 'function') restartParticles();
     });
   }
 
