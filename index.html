@@ -512,12 +512,12 @@ a,button,[role="button"]{transition:color var(--transition-interactive),backgrou
 
     <nav aria-label="Main navigation">
       <ul class="nav-links">
-        <li><a href="#research">Research</a></li>
+        <li><a href="#story">Story</a></li>
+        <li><a href="#sigma-sweep">Data</a></li>
+        <li><a href="#research">Framework</a></li>
         <li><a href="#about">About</a></li>
-        <li><a href="#alpha">Alpha</a></li>
         <li><a href="#projects">Projects</a></li>
         <li><a href="#blog">Notes</a></li>
-        <li><a href="#contact">Contact</a></li>
       </ul>
     </nav>
 
@@ -537,12 +537,12 @@ a,button,[role="button"]{transition:color var(--transition-interactive),backgrou
   <div class="container">
     <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
       <ul>
-        <li><a href="#research">Research</a></li>
+        <li><a href="#story">Story</a></li>
+        <li><a href="#sigma-sweep">Data</a></li>
+        <li><a href="#research">Framework</a></li>
         <li><a href="#about">About</a></li>
-        <li><a href="#alpha">Alpha</a></li>
         <li><a href="#projects">Projects</a></li>
         <li><a href="#blog">Notes</a></li>
-        <li><a href="#contact">Contact</a></li>
         <li style="margin-top:var(--space-4)"><a href="https://github.com/RogueGringo/JTopo" target="_blank" rel="noopener noreferrer" class="nav-gh-btn" style="display:inline-flex">GitHub</a></li>
       </ul>
     </nav>
@@ -742,7 +742,7 @@ a,button,[role="button"]{transition:color var(--transition-interactive),backgrou
           <div class="phase"><div class="pdot done"></div><p class="phase-text"><strong>Phase 3 K=20 (CPU)</strong> — 670× signal over controls; Fourier truncation explains monotone profile</p></div>
           <div class="phase"><div class="pdot done"></div><p class="phase-text"><strong>Phase 3b K=50 (GPU, RTX 4080)</strong> — First spectral turnover at ε=5.0; peak near σ ≈ 0.40–0.50</p></div>
           <div class="phase"><div class="pdot partial"></div><p class="phase-text"><strong>Phase 3c K=100 (GPU)</strong> — ε=3.0 signal reversal confirmed; Fourier sharpening at narrower bandwidth</p></div>
-          <div class="phase"><div class="pdot todo"></div><p class="phase-text"><strong>Phase 4</strong> — K=100+ full sweep on RunPod A100/MI300X; scaling analysis C(σ*, K) vs K → ∞</p></div>
+          <div class="phase"><div class="pdot todo"></div><p class="phase-text"><strong>Phase 4</strong> — K=200+ sweep on RTX 5070 (12GB); scaling analysis C(σ*, K) vs K → ∞</p></div>
         </div>
         <div class="proj-links">
           <a href="https://github.com/RogueGringo/JTopo" target="_blank" rel="noopener noreferrer" class="pill pill-primary">
@@ -814,10 +814,10 @@ a,button,[role="button"]{transition:color var(--transition-interactive),backgrou
       <h3 class="section-title" style="font-size:var(--text-xl);margin-bottom:var(--space-8);">Adaptive Topological Field Theory</h3>
 
       <div class="tabs-nav" role="tablist">
-        <button class="tab-btn active" role="tab" data-tab="fiber" aria-selected="true">Fiber Structure</button>
-        <button class="tab-btn" role="tab" data-tab="gauge" aria-selected="false">Gauge Connection</button>
-        <button class="tab-btn" role="tab" data-tab="laplacian" aria-selected="false">Sheaf Laplacian</button>
-        <button class="tab-btn" role="tab" data-tab="test" aria-selected="false">Statistical Test</button>
+        <button class="tab-btn active" role="tab" data-tab="fiber" aria-selected="true">The Points</button>
+        <button class="tab-btn" role="tab" data-tab="gauge" aria-selected="false">The Threads</button>
+        <button class="tab-btn" role="tab" data-tab="laplacian" aria-selected="false">The Fabric</button>
+        <button class="tab-btn" role="tab" data-tab="test" aria-selected="false">The Measurement</button>
       </div>
 
       <!-- TAB 1: Fiber Structure -->
@@ -930,131 +930,7 @@ a,button,[role="button"]{transition:color var(--transition-interactive),backgrou
         </div>
       </div>
     </div>
-
-    <!-- 2e. Experimental Results -->
-    <div class="reveal" style="margin-top:var(--space-16);">
-      <p class="section-label">Experimental Results</p>
-      <h3 class="section-title" style="font-size:var(--text-xl);margin-bottom:var(--space-8);">Phase Progression</h3>
-
-      <!-- Phase 1 -->
-      <div class="phase-card">
-        <div class="phase-header">
-          <span class="phase-name">Phase 1 — Spectral Baseline</span>
-          <span class="badge badge-green">✓ Complete</span>
-        </div>
-        <p class="phase-finding"><strong>Key finding:</strong> Zeta zeros track GUE topology at all scales. The convergence ratio S_zeta/S_GUE narrows from 0.144 to 0.052 as ε increases — confirming the Montgomery-Odlyzko connection holds in sheaf-Laplacian spectra.</p>
-        <div class="phase-highlight">Convergence ratio: 0.144 → 0.052 &nbsp;|&nbsp; Zeta ≈ GUE validated</div>
-      </div>
-
-      <!-- Phase 2 -->
-      <div class="phase-card">
-        <div class="phase-header">
-          <span class="phase-name">Phase 2 — Transport Map Validation</span>
-          <span class="badge badge-green">✓ Complete</span>
-        </div>
-        <p class="phase-finding"><strong>Key finding:</strong> The Functional Equation transport achieves exact unitarity at σ = 0.5 and breaks unitarity off-line, confirming theoretical predictions. However, FE mode is ruled out as the primary discriminator — its signal is too sharp. The <em>Superposition mode</em> carries the real information.</p>
-        <div class="phase-highlight">FE unitarity at σ=0.5: Confirmed &nbsp;|&nbsp; Primary discriminator: Superposition mode</div>
-      </div>
-
-      <!-- Phase 3 K=20 -->
-      <div class="phase-card">
-        <div class="phase-header">
-          <span class="phase-name">Phase 3 — K=20 Sweep</span>
-          <span class="badge badge-green">✓ Complete</span>
-        </div>
-        <p class="phase-finding"><strong>Key finding:</strong> First full σ-sweep with Fourier-truncated superposition connection. Signal ratio 670× over Poisson and GUE controls. Monotonic profile — no turnover at this resolution. This is the Fourier truncation effect: at low K, the connection has insufficient frequency content to resolve the critical line.</p>
-
-        <div class="data-table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>σ</th>
-                <th>S(σ) ε=5.0</th>
-                <th>S(σ) ε=3.0</th>
-                <th>C_poisson</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>0.30</td><td>2.41e+05</td><td>1.87e+04</td><td>1.0×</td></tr>
-              <tr><td>0.40</td><td>4.12e+05</td><td>3.22e+04</td><td>12×</td></tr>
-              <tr><td class="highlight-cell">0.50</td><td class="highlight-cell">6.83e+05</td><td class="highlight-cell">5.61e+04</td><td class="highlight-cell">670×</td></tr>
-              <tr><td>0.60</td><td>1.14e+06</td><td>9.40e+04</td><td>280×</td></tr>
-              <tr><td>0.70</td><td>1.89e+06</td><td>1.57e+05</td><td>95×</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="phase-highlight">670× signal ratio &nbsp;|&nbsp; Monotonic S(σ) &nbsp;|&nbsp; Fourier truncation identified</div>
-      </div>
-
-      <!-- Phase 3b K=50 — DRAMATIC HIGHLIGHT -->
-      <div class="phase-card">
-        <div class="phase-header">
-          <span class="phase-name">Phase 3b — K=50 Sweep</span>
-          <span class="badge badge-green">✓ Complete</span>
-        </div>
-        <div class="spectral-highlight">
-          <div class="spectral-highlight-title">⚡ First Spectral Turnover Detected</div>
-          <p class="phase-finding" style="color:var(--color-text);margin-bottom:0;">At ε=5.0, the spectral sum S(σ) shows a ~4% signal drop — the first deviation from monotonic behavior. The peak shifts to σ ≈ 0.40–0.50, hinting at the onset of a phase transition. This is the Fourier sharpening effect: as K increases, the connection resolves finer structure near the critical line.</p>
-        </div>
-        <div class="phase-highlight">~4% signal drop at ε=5.0 &nbsp;|&nbsp; Peak σ ≈ 0.40–0.50 &nbsp;|&nbsp; Fourier sharpening onset</div>
-      </div>
-
-      <!-- Phase 3c K=100 -->
-      <div class="phase-card">
-        <div class="phase-header">
-          <span class="phase-name">Phase 3c — K=100 Sweep</span>
-          <span class="badge badge-amber">⏳ Partial — 2 pts</span>
-        </div>
-        <p class="phase-finding"><strong>Key finding:</strong> Signal reversal at ε=3.0 confirmed with the first two data points. The spectral sum begins to decrease — the phase transition is sharpening with increasing Fourier resolution. CPU bottleneck identified: each K=100 point requires ~45 min on 32-core Threadripper. PyTorch GPU backend in development.</p>
-        <div class="phase-highlight">Signal reversal confirmed at ε=3.0 &nbsp;|&nbsp; CPU bottleneck → PyTorch backend solution</div>
-      </div>
-
-      <!-- Fourier Sharpening Table -->
-      <p class="section-label" style="margin-top:var(--space-8);">Fourier Sharpening Progression</p>
-      <div class="data-table-wrap" style="margin-top:var(--space-4);">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>K</th>
-              <th>Primes</th>
-              <th>Fiber Dim</th>
-              <th>ε=5.0 Profile</th>
-              <th>ε=3.0 Profile</th>
-              <th>Peak σ</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>20</td><td>8</td><td>101</td>
-              <td>Monotonic ↗</td><td>Monotonic ↗</td>
-              <td>—</td>
-            </tr>
-            <tr>
-              <td>50</td><td>15</td><td>371</td>
-              <td class="highlight-cell">~4% turnover</td><td>Monotonic ↗</td>
-              <td class="highlight-cell">≈ 0.40–0.50</td>
-            </tr>
-            <tr>
-              <td>100</td><td>25</td><td>1,060</td>
-              <td>TBD</td><td class="highlight-cell">Reversal ↘</td>
-              <td>TBD</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Results images -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-6);margin-top:var(--space-8);">
-        <div class="project-visual" style="aspect-ratio:auto;">
-          <img src="./assets/spectral-peak-mesh.jpg" alt="Spectral peak at σ=0.5 on teal mesh surface" loading="lazy" />
-          <div class="project-visual-overlay"></div>
-        </div>
-        <div class="project-visual" style="aspect-ratio:auto;">
-          <img src="./assets/sigma-epsilon-heatmap.jpg" alt="σ-ε parameter space heatmap visualization" loading="lazy" />
-          <div class="project-visual-overlay"></div>
-        </div>
-      </div>
-    </div>
+    <button class="panel-trigger" data-panel="panel-connection">+ See the math: u(K) Connection</button>
 
     <!-- 2f. GPU Infrastructure -->
     <div class="project-feature project-feature--rev reveal" style="margin-top:var(--space-16);">
@@ -1077,7 +953,7 @@ a,button,[role="button"]{transition:color var(--transition-interactive),backgrou
           <span class="tag">Python 3.11+</span><span class="tag">NumPy / SciPy</span>
           <span class="tag">PyTorch ≥ 2.1</span><span class="tag">CuPy CUDA 12x</span>
           <span class="tag">BSR Sparse</span><span class="tag">Lanczos eigensolver</span>
-          <span class="tag">AMD ROCm 6.x</span><span class="tag">RunPod A100</span>
+          <span class="tag">AMD ROCm 6.x</span><span class="tag">RTX 5070 12GB</span>
           <span class="tag">h5py / HDF5</span><span class="tag">Odlyzko dataset</span>
         </div>
       </div>
@@ -1195,17 +1071,24 @@ a,button,[role="button"]{transition:color var(--transition-interactive),backgrou
           </div>
         </div>
         <div class="status-card">
-          <div class="status-indicator amber"></div>
+          <div class="status-indicator green"></div>
           <div>
             <div class="status-phase">Phase 3c — K=100 Sweep</div>
-            <div class="status-detail">Partial (2 pts). Signal reversal at ε=3.0. CPU bottleneck → GPU migration.</div>
+            <div class="status-detail">Complete. Full sweep: 90 grid points, 3 sources. Three-tier hierarchy confirmed.</div>
           </div>
         </div>
         <div class="status-card">
-          <div class="status-indicator red"></div>
+          <div class="status-indicator amber"></div>
+          <div>
+            <div class="status-phase">Phase 3d — K=200 Sweep</div>
+            <div class="status-detail">T1 complete. Arithmetic premium peaks at σ=0.500 (21.5%). T2/T3 pending.</div>
+          </div>
+        </div>
+        <div class="status-card">
+          <div class="status-indicator amber"></div>
           <div>
             <div class="status-phase">Phase 4 — Scaling Analysis</div>
-            <div class="status-detail">Blocked. Requires full K=100 sweep completion.</div>
+            <div class="status-detail">In progress. Fourier sharpening confirmed K=20→K=200. Full scaling analysis pending.</div>
           </div>
         </div>
       </div>
@@ -1214,7 +1097,7 @@ a,button,[role="button"]{transition:color var(--transition-interactive),backgrou
         <div>
           <p class="section-label" style="margin-bottom:var(--space-4);">Current Bottleneck</p>
           <div class="card">
-            <p class="card-text">K=100+ σ-sweep requires GPU acceleration. Each point takes ~45 min on 32-core AMD Threadripper (CPU). PyTorch backend targets &lt;3 min/point on A100. Full K=100 sweep (11 σ-points × 3 ε-values × 3 sources) = 99 computations.</p>
+            <p class="card-text">K=200 σ-sweep runs on local RTX 5070 (12GB VRAM). Batched edge assembly + scipy CPU coalesce enables K=200 at N=1000. Each point takes ~30 min. Full K=200 sweep (15 σ × 3 sources) = 45 computations.</p>
           </div>
         </div>
         <div>
@@ -1224,8 +1107,7 @@ a,button,[role="button"]{transition:color var(--transition-interactive),backgrou
               <thead><tr><th>Machine</th><th>Role</th><th>Status</th></tr></thead>
               <tbody>
                 <tr><td>Threadripper 7960X</td><td>Development / CPU sweeps</td><td class="highlight-cell">Active</td></tr>
-                <tr><td>RunPod A100</td><td>GPU sweeps (on-demand)</td><td>Standby</td></tr>
-                <tr><td>RunPod MI300X</td><td>Large-K scaling runs</td><td>Planned</td></tr>
+                <tr><td class="highlight-cell">RTX 5070</td><td class="highlight-cell">Primary GPU (12GB)</td><td class="highlight-cell">Active</td></tr>
               </tbody>
             </table>
           </div>
