@@ -661,6 +661,49 @@ a,button,[role="button"]{transition:color var(--transition-interactive),backgrou
 </section>
 
 <!-- ═══════════════════════════════════════════
+     SIGMA SWEEP
+     ═══════════════════════════════════════════ -->
+<section class="section" id="sigma-sweep" aria-labelledby="sweep-h">
+  <div class="container">
+    <div class="section-header reveal">
+      <p class="section-label">Interactive Data</p>
+      <h2 class="section-title" id="sweep-h">Tune the Fabric Yourself</h2>
+      <p class="section-desc">Drag the slider to vary σ across the critical strip. Watch how the spectral sum — the fabric's wrinkle score — changes for zeta zeros vs. controls.</p>
+    </div>
+    <div class="sweep-controls reveal">
+      <label for="sigmaSlider" class="sr-only">Sigma value</label>
+      <input type="range" id="sigmaSlider" class="sweep-slider" min="0.25" max="0.75" step="0.01" value="0.50">
+      <span class="sweep-value" id="sigmaDisplay">σ = 0.50</span>
+      <div class="k-toggle" role="group" aria-label="Select K value">
+        <button class="k-toggle-btn" data-k="K100">K=100</button>
+        <button class="k-toggle-btn active" data-k="K200">K=200</button>
+      </div>
+    </div>
+    <div class="chart-wrap reveal">
+      <canvas id="sweepChart" aria-label="Spectral sum chart showing S(σ) for Zeta, GUE, and Random sources"></canvas>
+    </div>
+    <button class="panel-trigger" data-panel="panel-spectral">+ See the math: Reading the Spectral Sum</button>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     ARITHMETIC PREMIUM
+     ═══════════════════════════════════════════ -->
+<section class="section" id="premium" aria-labelledby="premium-h">
+  <div class="container">
+    <div class="section-header reveal">
+      <p class="section-label">Signal Analysis</p>
+      <h2 class="section-title" id="premium-h">How Much More Than Noise</h2>
+      <p class="section-desc">The arithmetic premium — the ratio of zeta's spectral sum to GUE's — isolates what the primes contribute beyond statistical structure. Watch the minimum march toward σ&nbsp;=&nbsp;0.500 as K increases.</p>
+    </div>
+    <div class="chart-wrap reveal">
+      <canvas id="premiumChart" aria-label="Arithmetic premium chart showing zeta/GUE ratio across sigma for multiple K values"></canvas>
+    </div>
+    <button class="panel-trigger" data-panel="panel-gue">+ See the math: Why GUE, Not Just Random?</button>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
      2. RESEARCH — Ti V0.1
      ═══════════════════════════════════════════ -->
 <section class="section" id="research" aria-labelledby="research-h">
@@ -1517,6 +1560,72 @@ a,button,[role="button"]{transition:color var(--transition-interactive),backgrou
     </div>
   </div>
 </section>
+
+<!-- ═══════════════════════════════════════════
+     POP-OUT PANELS
+     ═══════════════════════════════════════════ -->
+<div class="panel-overlay" id="panelOverlay"></div>
+
+<div class="panel" id="panel-fourier" role="dialog" aria-label="The Fourier Kernel">
+  <button class="panel-close" aria-label="Close panel">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <h4>The Fourier Kernel</h4>
+  <p>The explicit formula connects zeta zeros to primes through an oscillatory sum. Each prime p contributes a phase factor to the transport map between zeros γ_i and γ_j:</p>
+  <div class="eq-block">
+    <div class="eq-label">Phase Factor</div>
+    <div class="eq-formula">e^{i · Δγ · log(p)} where Δγ = γ_i − γ_j</div>
+  </div>
+  <p>This is the Fourier kernel of the explicit formula — each prime acts as a frequency, and the log-spacing of primes creates the harmonic structure. More primes = more frequencies = sharper resolution of the spectral peak.</p>
+  <div class="eq-block">
+    <div class="eq-label">Superposition Transport</div>
+    <div class="eq-formula">A_ij(σ) = Σ_{p≤K} e^{iΔγ·log p} · B_p(σ)</div>
+  </div>
+  <p>The matrix B_p(σ) encodes the arithmetic weight of each prime at position σ in the critical strip. At σ = 0.500, the functional equation symmetry makes the contributions from p^{−σ} and p^{−(1−σ)} equal — creating maximum constructive interference.</p>
+</div>
+
+<div class="panel" id="panel-spectral" role="dialog" aria-label="Reading the Spectral Sum">
+  <button class="panel-close" aria-label="Close panel">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <h4>Reading the Spectral Sum</h4>
+  <p>The spectral sum S(σ) = Σ λ_k is the sum of the smallest eigenvalues of the sheaf Laplacian at position σ. It measures how "wrinkled" the prime fabric is.</p>
+  <p><strong>Low S(σ)</strong> = the sheaf is nearly flat. The transport maps are nearly consistent — primes "agree" on the geometry at this σ. The fabric fits.</p>
+  <p><strong>High S(σ)</strong> = large eigenvalues, inconsistent transport. Primes disagree about the geometry. The fabric is loose.</p>
+  <p>The Betti number β₀ (number of eigenvalues near zero) counts the connected components of the "flat" part of the sheaf. At σ = 0.500, β₀ is maximized — the largest coherent structure.</p>
+  <div class="eq-block">
+    <div class="eq-label">Order Parameter</div>
+    <div class="eq-formula">S(σ) = Σ_{k=1}^{k_eig} λ_k(L_𝓕(σ))</div>
+  </div>
+</div>
+
+<div class="panel" id="panel-gue" role="dialog" aria-label="Why GUE?">
+  <button class="panel-close" aria-label="Close panel">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <h4>Why GUE, Not Just Random?</h4>
+  <p>The Gaussian Unitary Ensemble (GUE) is a random matrix model whose eigenvalue statistics match the local statistics of zeta zeros — the Montgomery-Odlyzko law. GUE points have the same spacing distribution as zeta zeros but lack their global arithmetic structure.</p>
+  <p>Comparing zeta to Poisson (uniform random) measures total signal. Comparing zeta to GUE isolates the <em>arithmetic</em> signal — the part that comes specifically from primes, not from the generic repulsion statistics that any L-function would share.</p>
+  <p>The arithmetic premium (1 − S_zeta/S_GUE) measures how much tighter the prime fabric is compared to this statistically identical but arithmetically empty control. At K=200, this premium is 21.5% at σ = 0.500.</p>
+</div>
+
+<div class="panel" id="panel-connection" role="dialog" aria-label="u(K) Connection">
+  <button class="panel-close" aria-label="Close panel">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+  <h4>The u(K) Connection</h4>
+  <p>Each prime p ≤ K defines a K×K representation matrix ρ(p) — the truncated left-regular representation of ℤ/pℤ. This is a cyclic permutation matrix: it shifts basis vectors by one position modulo p.</p>
+  <div class="eq-block">
+    <div class="eq-label">Prime Representation</div>
+    <div class="eq-formula">ρ(p)_jk = δ_{j, (k+1 mod p)}</div>
+  </div>
+  <p>The transport map between zeros γ_i and γ_j is constructed by exponentiating a Lie algebra element built from all prime representations simultaneously — the superposition mode:</p>
+  <div class="eq-block">
+    <div class="eq-label">Transport Map</div>
+    <div class="eq-formula">U_ij = exp(i · Σ_p A_p(σ) · log ρ(p))</div>
+  </div>
+  <p>This connection lives in the unitary group U(K). As K grows, the fiber dimension increases and the connection encodes more of the prime harmonic structure.</p>
+</div>
 
 </main>
 
