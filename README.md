@@ -10,25 +10,23 @@
 ```
 
 > Topological Investigation of the Riemann Hypothesis.
-> One GPU. 46 primes. 16 standard deviations.
+> One GPU. 46 primes. 21.5%.
 
 ---
 
-## What Happened
+## Primes Aren't a List. They're a Field.
 
-We gave 46 prime numbers a space to move through — the zeros of the Riemann zeta function — and wove them into a fabric using nothing but the internal grammar they already carry.
+Everyone who's looked at primes long enough arrives at the same place: the gaps oscillate, the patterns recur at scale, the structure is multi-dimensional. Some see standing waves. Some see eigenvalue repulsion. We see **transport coherence** — how well the primes' internal grammar carries information across the zeros of the zeta function.
 
-Then we asked: **where does the fabric fit best?**
+We built an interpreter for that coherence. A sheaf Laplacian with a gauge connection woven from prime arithmetic — the same phase factors that appear in the explicit formula connecting primes to zeros. Then we fed it four different point clouds and asked: **who threads the zeros most coherently?**
 
-At σ = 0.500. The critical line. Every time. More primes, tighter fabric, deeper resonance.
+The answer, at every scale tested: the zeta zeros. By 21.5% over random matrices that share their local statistics. By 7.3% over mathematically perfect spacing. Sixteen standard deviations from the ensemble mean. Stable from 25 primes to 78.
 
 Then we tried to kill it.
 
-Built the most ordered thing mathematics can produce — perfectly evenly-spaced points, zero randomness — and ran it through the same pipeline. If the fabric just measured tidiness, perfection should win.
+Built the most ordered thing mathematics can produce — evenly spaced points, zero randomness. The primes still won. Built 10 independent random matrix ensembles using the proper Dumitriu-Edelman model. The primes fell 16σ below. Checked if it was just edge density in the graph. It wasn't — 15.3% per-edge premium survives normalization.
 
-It didn't. The primes still wove tighter. By 7.3% in total. By 15.3% per edge. Across all scales tested. And when we ran 10 independent random matrix ensembles through the same pipe, zeta zeros fell **16 standard deviations** below the ensemble mean.
-
-That's not noise. That's not an edge-count artifact. That's arithmetic transport coherence — a property that only the prime-zero relationship carries.
+The primes carry something that order alone doesn't. Something that statistics alone doesn't. The interpreter says coherence. The data says 21.5%. This repo is the measurement.
 
 ## The Numbers
 
