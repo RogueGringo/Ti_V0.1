@@ -402,18 +402,48 @@ a,button,[role="button"]{transition:color var(--transition-interactive),backgrou
 /* ═══════════════════════════════════════════
    POP-OUT PANELS
    ═══════════════════════════════════════════ */
+/* ─── Panel triggers ─── */
 .panel-trigger{display:inline-flex;align-items:center;gap:var(--space-2);font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-teal);cursor:pointer;border:none;background:none;letter-spacing:0.04em;margin-top:var(--space-4);}
 .panel-trigger:hover{color:var(--color-teal-hover);}
-.panel-overlay{position:fixed;inset:0;z-index:200;background:oklch(0 0 0 / 0.4);opacity:0;pointer-events:none;transition:opacity 280ms cubic-bezier(0.16,1,0.3,1);}
-.panel-overlay.open{opacity:1;pointer-events:auto;}
-.panel{position:fixed;top:0;right:0;bottom:0;z-index:201;max-width:480px;width:100%;background:oklch(from var(--color-surface) l c h / 0.92);backdrop-filter:blur(24px) saturate(1.3);-webkit-backdrop-filter:blur(24px) saturate(1.3);border-left:3px solid var(--color-teal);padding:var(--space-8);overflow-y:auto;transform:translateX(100%);transition:transform 280ms cubic-bezier(0.16,1,0.3,1);}
-.panel.open{transform:translateX(0);}
-.panel-close{position:absolute;top:var(--space-4);right:var(--space-4);width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-full);color:var(--color-text-muted);cursor:pointer;border:none;background:none;}
-.panel-close:hover{background:var(--color-surface-offset);color:var(--color-text);}
-.panel h4{font-family:var(--font-display);font-size:var(--text-lg);font-weight:500;margin-bottom:var(--space-6);margin-top:var(--space-8);}
-.panel p{font-size:var(--text-sm);color:var(--color-text-muted);line-height:1.82;margin-bottom:var(--space-4);}
-.panel .eq-block{margin-bottom:var(--space-4);}
-@media(max-width:640px){.panel{max-width:100%;border-left:none;border-top:3px solid var(--color-teal);}.panel-close{width:48px;height:48px;}}
+/* ─── Popout overlay ─── */
+.popout-overlay{position:fixed;inset:0;z-index:200;background:oklch(0 0 0 / 0.5);backdrop-filter:blur(4px);opacity:0;visibility:hidden;transition:opacity 0.3s cubic-bezier(0.4,0,0.2,1),visibility 0.3s;}
+.popout-overlay.active{opacity:1;visibility:visible;}
+/* ─── Popout panel ─── */
+.popout-panel{position:fixed;top:0;right:0;bottom:0;z-index:201;width:min(560px,90vw);background:oklch(from var(--color-surface) l c h / 0.94);backdrop-filter:blur(24px) saturate(1.4);-webkit-backdrop-filter:blur(24px) saturate(1.4);border-left:1px solid oklch(from var(--color-teal) l c h / 0.25);transform:translateX(100%);transition:transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94);overflow-y:auto;overscroll-behavior:contain;padding:var(--space-12) var(--space-8) var(--space-8);}
+.popout-panel.active{transform:translateX(0);}
+body.popout-open{overflow:hidden;}
+/* ─── Ambient image ─── */
+.popout-ambient{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+.popout-ambient img{width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 0.6s ease;}
+/* ─── Close button ─── */
+.popout-close{position:absolute;top:var(--space-4);right:var(--space-4);z-index:2;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-full);border:1px solid oklch(from var(--color-teal) l c h / 0.2);color:var(--color-text-muted);cursor:pointer;background:none;transition:color 0.3s,border-color 0.3s;}
+.popout-close:hover{color:var(--color-teal);border-color:var(--color-teal);}
+/* ─── Content structure ─── */
+.popout-panel h3,.popout-panel .popout-body,.popout-panel .popout-data,.popout-panel .popout-close,.popout-panel .popout-category{position:relative;z-index:1;}
+.popout-category{font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:0.15em;text-transform:uppercase;color:var(--color-teal);margin-bottom:var(--space-3);display:block;}
+.popout-panel h3{font-family:var(--font-display);font-size:var(--text-xl);font-weight:500;color:var(--color-text);margin-bottom:var(--space-6);line-height:1.2;}
+.popout-body{font-size:var(--text-sm);line-height:1.82;color:var(--color-text-muted);}
+.popout-body p{margin-bottom:var(--space-4);}
+.popout-body .eq-block{margin:var(--space-4) 0;border-left:2px solid oklch(from var(--color-primary) l c h / 0.3);padding-left:var(--space-4);}
+.popout-data{font-family:var(--font-mono);font-size:var(--text-xs);letter-spacing:0.08em;color:var(--color-primary);margin-top:var(--space-8);padding-top:var(--space-4);border-top:1px solid var(--color-border);}
+/* ─── Effect: field (ambient pulses like standing wave) ─── */
+.popout-effect-field .popout-ambient img{animation:fieldPulse 4s ease-in-out infinite;}
+@keyframes fieldPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.03);}}
+/* ─── Effect: proof (data strip builds like terminal) ─── */
+.popout-effect-proof .popout-data{opacity:0;transform:translateY(8px);transition:opacity 0.4s 0.6s,transform 0.4s 0.6s;}
+.popout-effect-proof.active .popout-data{opacity:1;transform:translateY(0);}
+/* ─── Effect: journey (paragraphs stagger in) ─── */
+.popout-effect-journey .popout-body p{opacity:0;transform:translateX(-12px);transition:opacity 0.35s,transform 0.35s;}
+.popout-effect-journey.active .popout-body p:nth-child(1){transition-delay:0.1s;opacity:1;transform:translateX(0);}
+.popout-effect-journey.active .popout-body p:nth-child(2){transition-delay:0.2s;opacity:1;transform:translateX(0);}
+.popout-effect-journey.active .popout-body p:nth-child(3){transition-delay:0.3s;opacity:1;transform:translateX(0);}
+.popout-effect-journey.active .popout-body p:nth-child(4){transition-delay:0.4s;opacity:1;transform:translateX(0);}
+.popout-effect-journey.active .popout-body p:nth-child(5){transition-delay:0.5s;opacity:1;transform:translateX(0);}
+.popout-effect-journey.active .popout-body p:nth-child(6){transition-delay:0.6s;opacity:1;transform:translateX(0);}
+.popout-effect-journey.active .popout-body p:nth-child(7){transition-delay:0.7s;opacity:1;transform:translateX(0);}
+.popout-effect-journey.active .popout-body p:nth-child(n+8){transition-delay:0.8s;opacity:1;transform:translateX(0);}
+/* ─── Mobile ─── */
+@media(max-width:640px){.popout-panel{width:100%;border-left:none;border-top:1px solid oklch(from var(--color-teal) l c h / 0.25);}.popout-close{width:48px;height:48px;}}
 
 /* ═══════════════════════════════════════════
    K-PROGRESSION TIMELINE
@@ -668,6 +698,7 @@ a,button,[role="button"]{transition:color var(--transition-interactive),backgrou
         <p class="k-narrative">Every prime under 200 — each one irreducible, each one whole, each one threading the zeta zeros along a path no one drew for them. And they meet. σ&nbsp;=&nbsp;0.500. Not collision. <strong>Resonance.</strong> The manifold has a heartbeat and the primes are its pulse.</p>
       </div>
     </div>
+    <button class="panel-trigger" data-panel="panel-k-journey">+ The full story: K=20 to K=400</button>
   </div>
 </section>
 
@@ -711,6 +742,7 @@ a,button,[role="button"]{transition:color var(--transition-interactive),backgrou
       <canvas id="premiumChart" aria-label="Arithmetic premium chart showing zeta/GUE ratio across sigma for multiple K values"></canvas>
     </div>
     <button class="panel-trigger" data-panel="panel-gue">+ See the math: Why GUE, Not Just Random?</button>
+    <button class="panel-trigger" data-panel="panel-constant">+ The number: 21.5% — A Physical Constant?</button>
   </div>
 </section>
 
@@ -1074,8 +1106,9 @@ a,button,[role="button"]{transition:color var(--transition-interactive),backgrou
           <span class="tag">PyTorch ≥ 2.1</span><span class="tag">CuPy CUDA 12x</span>
           <span class="tag">BSR Sparse</span><span class="tag">Lanczos eigensolver</span>
           <span class="tag">AMD ROCm 6.x</span><span class="tag">RTX 5070 12GB</span>
-          <span class="tag">h5py / HDF5</span><span class="tag">Odlyzko dataset</span>
+          <span class="tag">h5py / HDF5</span><span class="tag">Odlyzko dataset</span><span class="tag">Matrix-Free Pad\u00e9</span>
         </div>
+        <button class="panel-trigger" data-panel="panel-matrix-free" style="margin-top:var(--space-4);">+ The breakthrough: The Lighter Airframe</button>
       </div>
     </div>
 
@@ -1588,91 +1621,17 @@ a,button,[role="button"]{transition:color var(--transition-interactive),backgrou
 <!-- ═══════════════════════════════════════════
      POP-OUT PANELS
      ═══════════════════════════════════════════ -->
-<div class="panel-overlay" id="panelOverlay"></div>
-
-<div class="panel" id="panel-fourier" role="dialog" aria-label="The Fourier Kernel">
-  <button class="panel-close" aria-label="Close panel">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+<!-- Single reusable popout panel (data-driven from app.js PANELS object) -->
+<div class="popout-overlay" id="popoutOverlay"></div>
+<div class="popout-panel" id="popoutPanel" role="dialog" aria-modal="true">
+  <div class="popout-ambient" id="popoutAmbient" aria-hidden="true"></div>
+  <button class="popout-close" id="popoutClose" aria-label="Close panel">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
   </button>
-  <h4>The Fourier Kernel</h4>
-  <p>The explicit formula connects zeta zeros to primes through an oscillatory sum. Each prime p contributes a phase factor to the transport map between zeros γ_i and γ_j:</p>
-  <div class="eq-block">
-    <div class="eq-label">Phase Factor</div>
-    <div class="eq-formula">e^{i · Δγ · log(p)} where Δγ = γ_i − γ_j</div>
-  </div>
-  <p>This is the Fourier kernel of the explicit formula — each prime acts as a frequency, and the log-spacing of primes creates the harmonic structure. More primes = more frequencies = sharper resolution of the spectral peak.</p>
-  <div class="eq-block">
-    <div class="eq-label">Superposition Transport</div>
-    <div class="eq-formula">A_ij(σ) = Σ_{p≤K} e^{iΔγ·log p} · B_p(σ)</div>
-  </div>
-  <p>The matrix B_p(σ) encodes the arithmetic weight of each prime at position σ in the critical strip. At σ = 0.500, the functional equation symmetry makes the contributions from p^{−σ} and p^{−(1−σ)} equal — creating maximum constructive interference.</p>
-</div>
-
-<div class="panel" id="panel-spectral" role="dialog" aria-label="Reading the Spectral Sum">
-  <button class="panel-close" aria-label="Close panel">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-  </button>
-  <h4>Reading the Spectral Sum</h4>
-  <p>The spectral sum S(σ) = Σ λ_k is the sum of the smallest eigenvalues of the sheaf Laplacian at position σ. It measures how "wrinkled" the prime fabric is.</p>
-  <p><strong>Low S(σ)</strong> = the sheaf is nearly flat. The transport maps are nearly consistent — primes "agree" on the geometry at this σ. The fabric fits.</p>
-  <p><strong>High S(σ)</strong> = large eigenvalues, inconsistent transport. Primes disagree about the geometry. The fabric is loose.</p>
-  <p>The Betti number β₀ (number of eigenvalues near zero) counts the connected components of the "flat" part of the sheaf. At σ = 0.500, β₀ is maximized — the largest coherent structure.</p>
-  <div class="eq-block">
-    <div class="eq-label">Order Parameter</div>
-    <div class="eq-formula">S(σ) = Σ_{k=1}^{k_eig} λ_k(L_𝓕(σ))</div>
-  </div>
-</div>
-
-<div class="panel" id="panel-gue" role="dialog" aria-label="Why GUE?">
-  <button class="panel-close" aria-label="Close panel">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-  </button>
-  <h4>Why GUE, Not Just Random?</h4>
-  <p>The Gaussian Unitary Ensemble (GUE) is a random matrix model whose eigenvalue statistics match the local statistics of zeta zeros — the Montgomery-Odlyzko law. GUE points have the same spacing distribution as zeta zeros but lack their global arithmetic structure.</p>
-  <p>Comparing zeta to Poisson (uniform random) measures total signal. Comparing zeta to GUE isolates the <em>arithmetic</em> signal — the part that comes specifically from primes, not from the generic repulsion statistics that any L-function would share.</p>
-  <p>The arithmetic premium (1 − S_zeta/S_GUE) measures how much tighter the prime fabric is compared to this statistically identical but arithmetically empty control. At K=200, this premium is 21.5% at σ = 0.500.</p>
-</div>
-
-<div class="panel" id="panel-connection" role="dialog" aria-label="u(K) Connection">
-  <button class="panel-close" aria-label="Close panel">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-  </button>
-  <h4>The u(K) Connection</h4>
-  <p>Each prime p ≤ K defines a K×K representation matrix ρ(p) — the truncated left-regular representation of ℤ/pℤ. This is a cyclic permutation matrix: it shifts basis vectors by one position modulo p.</p>
-  <div class="eq-block">
-    <div class="eq-label">Prime Representation</div>
-    <div class="eq-formula">ρ(p)_jk = δ_{j, (k+1 mod p)}</div>
-  </div>
-  <p>The transport map between zeros γ_i and γ_j is constructed by exponentiating a Lie algebra element built from all prime representations simultaneously — the superposition mode:</p>
-  <div class="eq-block">
-    <div class="eq-label">Transport Map</div>
-    <div class="eq-formula">U_ij = exp(i · Σ_p A_p(σ) · log ρ(p))</div>
-  </div>
-  <p>This connection lives in the unitary group U(K). As K grows, the fiber dimension increases and the connection encodes more of the prime harmonic structure.</p>
-</div>
-
-<div class="panel" id="panel-killshot" role="dialog" aria-label="Why Perfect Spacing Loses">
-  <button class="panel-close" aria-label="Close panel">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-  </button>
-  <h4>Why Perfect Spacing Loses to Primes</h4>
-  <p>The adversarial hypothesis: the spectral sum S(σ) = Tr(L_𝓕) is dominated by the number of edges |E| in the Vietoris-Rips complex. More regular spacing → more predictable edge counts → lower S. If true, evenly-spaced points (the most regular possible configuration) should achieve the lowest S.</p>
-  <p><strong>Result:</strong> S(Even) = 12.713 > S(ζ) = 11.784 at σ = 0.500. Evenly-spaced points produce a <em>higher</em> spectral sum than zeta zeros, refuting the edge-density explanation.</p>
-  <div class="eq-block">
-    <div class="eq-label">Four-Tier Hierarchy (σ = 0.500, K = 200)</div>
-    <div class="eq-formula">S(ζ) = 11.784 &lt; S(Even) = 12.713 &lt; S(GUE) = 15.004 &lt; S(Random) = 22.087</div>
-  </div>
-  <p><strong>Interpretation:</strong> The transport matrices U_ij(σ) encode prime-derived phase factors exp(iΔγ·log p). For zeta zeros, these phases are not random — they are constrained by the explicit formula, creating constructive interference at σ = 0.500. Evenly-spaced points share the edge geometry but lack the arithmetic phase structure. The 7.3% premium is the measurable signature of arithmetic coherence beyond geometric order.</p>
-  <div class="eq-block">
-    <div class="eq-label">Arithmetic Coherence Premium (over Even Spacing)</div>
-    <div class="eq-formula">(1 − S_ζ / S_Even) × 100 = 7.3% at σ = 0.500</div>
-  </div>
-  <p><strong>Edge normalization:</strong> Zeta has 2,492 Rips edges vs GUE's 2,729 (mean of 10 realizations). Even after dividing S by |E|, zeta's per-edge spectral sum (0.00473) is 15.3% lower than GUE's (0.00559). The premium survives edge normalization.</p>
-  <div class="eq-block">
-    <div class="eq-label">GUE Ensemble (10 Dumitriu-Edelman realizations)</div>
-    <div class="eq-formula">S(GUE) = 14.970 ± 0.198 &nbsp; | &nbsp; S(ζ) = 11.784 &nbsp; | &nbsp; Z = −16.06</div>
-  </div>
-  <p><strong>Statistical note:</strong> The hierarchy holds at all 11 sigma values (σ ∈ [0.25, 0.75]). Across 10 independent GUE realizations with the proper Dumitriu-Edelman tridiagonal model, zeta falls 16 standard deviations below the ensemble mean. Sigma points within a single source are not independent (effective n = 1), so within-source p-values are not reported. The GUE ensemble comparison provides the valid frequentist test.</p>
+  <span class="popout-category" id="popoutCategory"></span>
+  <h3 id="popoutTitle"></h3>
+  <div class="popout-body" id="popoutBody"></div>
+  <div class="popout-data" id="popoutData"></div>
 </div>
 
 </main>
