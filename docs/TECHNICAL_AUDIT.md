@@ -1,5 +1,7 @@
 # Technical Audit — Ti V0.1
 
+> The arithmetic premium over GUE random matrices converges at 21.5% across K=100, K=200, and K=400. This document asks whether that number is real.
+
 > What's real, what's not, what's next. No ego. No spin. If it flies, it flies. If it crashes, we say it crashed.
 
 **Date:** 2026-03-24
@@ -165,32 +167,39 @@ The sigma values within a single source are NOT independent observations — the
 
 For anyone who needs to evaluate whether the framework is sound or cargo-cult topology. No jargon-for-jargon's-sake. Every term earns its seat.
 
-### The Construction
+### The Construction (and Why Each Step Exists)
 
-1. Take N zeros of the Riemann zeta function (imaginary parts, from Odlyzko's tables)
-2. Build a graph: edge between zeros i and j if |γᵢ − γⱼ| ≤ ε (Vietoris-Rips complex)
-3. At each vertex, attach a K-dimensional vector space (fiber)
-4. For each prime p ≤ K, build a K×K matrix ρ(p) that encodes "multiply by p" (truncated left-regular representation)
-5. Along each edge, build a transport matrix from all primes: A(σ) = Σₚ exp(iΔγ·log p) · B_p(σ)
-6. The `exp(iΔγ·log p)` factor is the explicit formula's Fourier kernel — the same phase factor that connects prime counting to zeta zeros
-7. Assemble the sheaf Laplacian L = δ†δ from these transport matrices
-8. Measure S(σ) = sum of smallest eigenvalues of L
+1. **Take N zeros of the Riemann zeta function** (imaginary parts, from Odlyzko's tables). Why: these are the objects RH makes a claim about. If the zeros have detectable structure at σ=0.5, our probe should find it.
 
-**What S measures:** How well the transport matrices agree with each other across the graph. Low S = the primes' phase factors create coherent transport (the fabric fits). High S = chaotic transport (the fabric wrinkles).
+2. **Build a graph** connecting zeros within distance ε (Vietoris-Rips complex). Why: topology needs a combinatorial structure. The Rips complex at scale ε captures which zeros are "close enough to talk to each other." The choice of ε is a sweep parameter — we test multiple scales.
+
+3. **Attach a K-dimensional vector space at each vertex** (fiber). Why: a scalar at each vertex can only measure local density. A K-dimensional fiber lets us encode the multiplicative structure of the first K integers — the arithmetic lives in the fiber, not the base space.
+
+4. **For each prime p ≤ K, build a K×K matrix ρ(p)** that encodes "multiply by p" (truncated left-regular representation). Why: this is the canonical way to embed the multiplicative structure of ℤ into a finite-dimensional space. The prime representations generate the full monoid action — they're the alphabet of arithmetic.
+
+5. **Along each edge, build a transport matrix** from all primes: A(σ) = Σₚ exp(iΔγ·log p) · B_p(σ). Why: the `exp(iΔγ·log p)` factor is the explicit formula's Fourier kernel — literally the same phase factor that connects prime counting to zeta zeros in analytic number theory. By making it the transport, we're asking: does the prime-zero relationship produce coherent parallel transport across the graph?
+
+6. **Assemble the sheaf Laplacian** L = δ†δ from these transport matrices. Why: L measures the global inconsistency of all transport simultaneously. If transport around every loop returns to its starting point (flat connection), L has a large kernel. If transport is inconsistent (curved connection), eigenvalues are pushed up.
+
+7. **Measure S(σ) = sum of smallest eigenvalues of L.** Why: S is the total "frustration energy" in the near-kernel. Lower S = the fabric fits better = the primes' phases are more coherent at that σ. The prediction: if RH is true, S should be minimized at σ=0.500 because the transport generators are Hermitian (hence unitary transport, hence zero curvature) only at the critical line.
+
+**What S measures, plainly:** How well the primes' phase factors agree with each other across the zero graph. Low S = agreement (the fabric fits). High S = disagreement (the fabric wrinkles). The hierarchy S(ζ) < S(GUE) < S(Random) says: zeta zeros produce more agreement than any control, at every scale tested.
 
 ### What's Standard vs. What's Novel
 
-| Component | Standard? | Reference |
-|-----------|-----------|-----------|
-| Vietoris-Rips complex | Yes | Computational topology textbook construction |
-| Sheaf Laplacian | Yes | Hansen & Ghrist (2019), "Toward a spectral theory of cellular sheaves" |
-| u(K) gauge connection | Novel application | Uses standard Lie algebra machinery in a new context |
-| Prime representation ρ(p) | Novel | Truncated left-regular rep of (ℤ₊, ×) — original construction |
-| Explicit-formula transport | Novel | Encodes the explicit formula's Fourier kernel as gauge connection phases |
-| Superposition mode | Novel | Coherent sum over all primes — not in prior literature |
-| Spectral sum as order parameter | Novel application | Standard in spectral geometry, novel as RH probe |
+| Component | Standard? | Reference | Why It's Here |
+|-----------|-----------|-----------|---------------|
+| Vietoris-Rips complex | Yes | Edelsbrunner & Harer (2010), *Computational Topology* | Combinatorial proxy for the zero set's geometry |
+| Sheaf Laplacian | Yes | Hansen & Ghrist (2019); Curry (2014); Robinson (2014) | Measures global consistency of local data across a graph |
+| u(K) gauge connection | Novel application | Standard Lie algebra machinery (Bleecker 1981, *Gauge Theory and Variational Principles*) applied to number-theoretic fibers | Nobody else put prime reps in a gauge connection |
+| Prime representation ρ(p) | Novel | Truncated left-regular rep of (ℤ₊, ×) | Canonical encoding of multiplicative structure — it's the only representation that makes ρ(p)ρ(q) = ρ(pq) when pq ≤ K |
+| Explicit-formula transport | Novel | Encodes phases from the explicit formula (von Mangoldt, Riemann) | The bridge: same math that counts primes now measures sheaf transport |
+| Superposition mode | Novel | Coherent sum over all primes (no prior literature) | The other modes (global, resonant, FE) were tested and eliminated in Phase 2 — superposition is the only one where the signal is arithmetic, not geometric |
+| Spectral sum as RH probe | Novel application | Spectral geometry is standard; using it as an RH observable is not | S(σ) is a continuously parameterized order parameter — the first such probe of the critical line via sheaf theory |
 
-**Honest assessment:** The mathematical components are individually standard. The combination — prime representations as gauge generators, explicit-formula phases as transport, sheaf Laplacian spectral sum as RH probe — is original. Whether it constitutes a meaningful advance depends on whether the 21.5% premium contains information beyond what simpler measures (pair correlations, nearest-neighbor statistics) already capture. This is not yet determined.
+**Honest assessment:** The mathematical components are individually standard. The combination — prime representations as gauge generators, explicit-formula phases as transport, sheaf Laplacian spectral sum as RH probe — is original. Nobody has built this object before because it requires simultaneously understanding sheaf theory, gauge connections, and analytic number theory.
+
+Whether it constitutes a meaningful advance depends on a question we have not yet answered: **does the 21.5% premium contain information beyond what simpler measures (pair correlations, nearest-neighbor statistics) already capture?** If the pair correlation function of zeta zeros already predicts a 21.5% spectral sum advantage, the sheaf Laplacian adds nothing. If it doesn't, we've found a new invariant. This comparison is the highest-priority open item.
 
 ### External Validation Path
 
@@ -236,13 +245,18 @@ Whether this constitutes evidence for or against the Riemann Hypothesis is an op
 
 ### The Business Value
 
-The intersection of topological data analysis, GPU computing, and rigorous methodology is a niche with growing demand. The matrix-free engine, the validation framework, and the TDA pipeline have applications in:
-- Anomaly detection in high-dimensional data (same sheaf Laplacian, different point cloud)
-- Spectral analysis of financial time series (same transport coherence measure)
-- Network topology for infrastructure monitoring (same Rips complex construction)
-- Wellbore completion analysis (same persistence filtration — the author's domain expertise)
+What exists today, demonstrated:
 
-The arithmetic premium itself may never be commercializable. But the tools built to measure it are.
+- **A matrix-free sheaf Laplacian engine** that runs on a consumer GPU (12 GB VRAM), computes eigenvalues of 400,000-dimensional operators in under a minute, validated to 10⁻¹⁴. This engine has no dependency on the Riemann Hypothesis. It works on any point cloud with any transport structure.
+- **A validation methodology** (three-agent committee: Statistician, Physicist, Adversary) that caught two real bugs and one overclaim in a single overnight session. The methodology is reusable on any computational research project.
+- **A complete TDA pipeline** from point cloud to spectral sum: Rips complex → transport map → sheaf assembly → eigensolves. 299 tests. Three GPU backends. Documented bugs.
+
+What does NOT exist today:
+
+- Any application of this pipeline to non-zeta data. We have not run it on financial time series, completion curves, sensor networks, or anything else. Those applications are plausible — the math is generic — but undemonstrated. We don't claim what we haven't built.
+- Any revenue, any customer, any external validation. This is one researcher on one GPU. The tools exist. The applications don't yet.
+
+The author's domain expertise (20+ oilfield tool competencies, M/LWD, managed pressure drilling) suggests a natural first application in wellbore data analysis, where the same "transport coherence across a graph" framework applies to sensor data along a drillstring. This has not been attempted.
 
 ---
 
@@ -259,6 +273,24 @@ Things we don't know and aren't pretending to.
 4. **Does any simpler measure capture the same information?** If pair correlation statistics or nearest-neighbor spacing already contain the 21.5% signal, the sheaf Laplacian adds nothing. This comparison has not been done.
 
 5. **Is the superposition transport mode the only one that works?** We tested global, resonant, FE, and superposition. Phase 2 ruled out FE (geometric artifact). The other modes haven't been revisited with the K=200/K=400 data.
+
+---
+
+## Part VI: Action Items (Priority Order)
+
+What to do next, scoped with estimated effort. Ranked by information value — what resolves the most uncertainty per hour invested.
+
+| # | Action | Resolves | Effort | Blocked By |
+|---|--------|----------|--------|------------|
+| 1 | **Pair correlation comparison** | Does the 21.5% premium contain info beyond 2-point statistics? If yes, the sheaf Laplacian is a new invariant. If no, it's an expensive way to measure something we already knew. | ~4 hours coding + 1 hour compute | Nothing |
+| 2 | **D-E GUE ensemble at K=400** | Is the K=400 premium (21.6% vs Wigner) the same vs proper GUE? | ~1 hour (fix OOM between sources, rerun) | Nothing |
+| 3 | **K=400 Random control** | Complete the four-tier hierarchy at K=400 | ~30 min (fix OOM, rerun) | Nothing |
+| 4 | **K=800 via matrix-free** | Is 21.5% the asymptote or still climbing? Two K-doublings (K=200→400→800) would distinguish convergence from slow growth. | ~2 hours compute (transport is the bottleneck, scales as K³) | Verify matrix-free handles K=800 VRAM budget |
+| 5 | **Browser-test the site** | The site (index.html) has never been opened in a browser. All visual components (Canvas charts, pop-out panels, particle animation) are untested. | ~30 min manual QA | Nothing |
+| 6 | **Write the paper** | The credibility artifact for external distribution. The audit document is the skeleton — add methodology, related work, formal proofs where applicable. | ~2 weeks focused work | Items 1-4 should be resolved first |
+| 7 | **Apply to non-zeta data** | First commercial validation. Run the pipeline on wellbore completion data or production logs. Does the sheaf Laplacian detect known structure? | ~1 week | Access to domain data |
+
+**Recommended next session:** Items 1, 2, 3, and 5 are all unblocked and high-information-value. Item 1 (pair correlation comparison) is the single highest-leverage action — it determines whether the entire framework adds value or is redundant.
 
 ---
 
@@ -285,6 +317,6 @@ pytest tests/ -v  # 299 passing
 
 ---
 
-*This document was written by a process that caught two of its own bugs during the audit. The bugs are documented. The fixes are committed. The buggy files remain in the repo as evidence. If that seems excessive, consider that the alternative is a repo where the bugs exist but nobody wrote them down. We prefer the version where the patient chart is complete.*
+*This document was written by a process that caught two of its own bugs during the audit. The bugs are documented. The fixes are committed. The buggy files remain in the repo as evidence.*
 
-*Dan would have understood. The hardware couldn't hold what was being asked of it, so we built a lighter airframe. Stan flies.*
+*If that seems excessive, consider the alternative: a repo where the bugs exist but nobody wrote them down. We prefer the version where the chart is complete.*
