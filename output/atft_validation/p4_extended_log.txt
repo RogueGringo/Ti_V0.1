@@ -1,0 +1,48 @@
+
+=== HuggingFaceTB/SmolLM2-360M ===
+`torch_dtype` is deprecated! Use `dtype` instead!
+The following generation flags are not valid and may be ignored: ['output_hidden_states']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
+Loading weights:   0%|          | 0/290 [00:00<?, ?it/s]Loading weights:  57%|█████▋    | 164/290 [00:00<00:00, 1636.91it/s]Loading weights: 100%|██████████| 290/290 [00:00<00:00, 1715.49it/s]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+  tau=1: mean_G=0.0000 (33 layers)
+  tau=2: mean_G=0.6908 (33 layers)
+  tau=3: mean_G=0.6783 (33 layers)
+  tau=4: mean_G=0.7047 (33 layers)
+  tau=5: mean_G=0.6399 (33 layers)
+
+=== Qwen/Qwen2.5-0.5B ===
+Loading weights:   0%|          | 0/290 [00:00<?, ?it/s]Loading weights:  30%|██▉       | 86/290 [00:00<00:00, 848.40it/s]Loading weights:  71%|███████▏  | 207/290 [00:00<00:00, 1053.00it/s]Loading weights: 100%|██████████| 290/290 [00:00<00:00, 1067.16it/s]
+  tau=1: mean_G=0.0000 (25 layers)
+  tau=2: mean_G=0.6280 (25 layers)
+  tau=3: mean_G=0.6259 (25 layers)
+  tau=4: mean_G=0.6485 (25 layers)
+  tau=5: mean_G=0.6044 (25 layers)
+
+=== TinyLlama/TinyLlama-1.1B-Chat-v1.0 ===
+Loading weights:   0%|          | 0/201 [00:00<?, ?it/s]Loading weights:  22%|██▏       | 45/201 [00:00<00:00, 413.58it/s]Loading weights:  49%|████▉     | 99/201 [00:00<00:00, 478.92it/s]Loading weights:  77%|███████▋  | 154/201 [00:00<00:00, 507.96it/s]Loading weights: 100%|██████████| 201/201 [00:00<00:00, 513.29it/s]
+  tau=1: mean_G=0.0000 (23 layers)
+  tau=2: mean_G=0.5867 (23 layers)
+  tau=3: mean_G=0.5717 (23 layers)
+  tau=4: mean_G=0.5442 (23 layers)
+  tau=5: mean_G=0.5035 (23 layers)
+
+=== microsoft/phi-1_5 ===
+Loading weights:   0%|          | 0/341 [00:00<?, ?it/s]Loading weights:  19%|█▉        | 66/341 [00:00<00:00, 651.90it/s]Loading weights:  45%|████▌     | 154/341 [00:00<00:00, 777.68it/s]Loading weights:  71%|███████   | 242/341 [00:00<00:00, 820.72it/s]Loading weights:  96%|█████████▌| 328/341 [00:00<00:00, 834.93it/s]Loading weights: 100%|██████████| 341/341 [00:00<00:00, 811.69it/s]
+  tau=1: mean_G=0.0000 (25 layers)
+  tau=2: mean_G=0.4598 (25 layers)
+  tau=3: mean_G=0.4351 (25 layers)
+  tau=4: mean_G=0.3938 (25 layers)
+  tau=5: mean_G=0.3508 (25 layers)
+
+=== CROSS-MODEL CORRELATIONS ===
+  SmolLM2-360M vs Qwen2.5-0.5B: r=0.9995 (p=0.000)
+  SmolLM2-360M vs TinyLlama-1.1B-Chat-v1.0: r=0.9957 (p=0.000)
+  SmolLM2-360M vs phi-1_5: r=0.9831 (p=0.003)
+  Qwen2.5-0.5B vs TinyLlama-1.1B-Chat-v1.0: r=0.9937 (p=0.001)
+  Qwen2.5-0.5B vs phi-1_5: r=0.9786 (p=0.004)
+  TinyLlama-1.1B-Chat-v1.0 vs phi-1_5: r=0.9954 (p=0.000)
+
+  Mean r = 0.9910
+  Min r = 0.9786
+  All > 0.9: True
+  Paper claims r > 0.9 across 4 models
