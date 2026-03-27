@@ -1,0 +1,51 @@
+K=800 D-E GUE TEST
+============================================================
+Generating D-E GUE...
+GUE spacing std: 0.5644 (should be ~0.56)
+
+K=800 D-E GUE computing (CPU transport ~20 min)...
+  [HybridLap] K=800, N=1000, M=2717 edges, dim=800000. matvec_batch=13. Computing transport on CPU (scipy.linalg.expm)...
+  [HybridLap] Transport 100/2717 (43s elapsed, ETA 1138s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 200/2717 (136s elapsed, ETA 1715s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 300/2717 (222s elapsed, ETA 1788s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 400/2717 (311s elapsed, ETA 1802s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 500/2717 (389s elapsed, ETA 1726s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 600/2717 (479s elapsed, ETA 1691s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 700/2717 (569s elapsed, ETA 1640s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 800/2717 (655s elapsed, ETA 1569s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 900/2717 (744s elapsed, ETA 1502s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 1000/2717 (827s elapsed, ETA 1419s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 1100/2717 (905s elapsed, ETA 1330s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 1200/2717 (990s elapsed, ETA 1252s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 1300/2717 (1070s elapsed, ETA 1167s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 1400/2717 (1155s elapsed, ETA 1086s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 1500/2717 (1243s elapsed, ETA 1008s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 1600/2717 (1328s elapsed, ETA 927s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 1700/2717 (1411s elapsed, ETA 844s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 1800/2717 (1499s elapsed, ETA 764s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 1900/2717 (1586s elapsed, ETA 682s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 2000/2717 (1661s elapsed, ETA 596s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 2100/2717 (1733s elapsed, ETA 509s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 2200/2717 (1807s elapsed, ETA 425s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 2300/2717 (1882s elapsed, ETA 341s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 2400/2717 (1970s elapsed, ETA 260s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 2500/2717 (2059s elapsed, ETA 179s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 2600/2717 (2150s elapsed, ETA 97s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 2700/2717 (2242s elapsed, ETA 14s, 27.82 GB CPU RAM)
+  [HybridLap] Transport 2717/2717 (2256s elapsed, ETA 0s, 27.82 GB CPU RAM)
+  [HybridLap] Transport done: 27.82 GB in CPU RAM. Total prep: 2256.3s
+  [HybridLap] Estimating lambda_max (quick Lanczos)...
+  [HybridLap] lambda_max=11.9687. Running full Lanczos...
+
+RESULTS:
+  K=800 S(Zeta)  = 11.210 (previous run)
+  K=800 S(D-E GUE) = 14.507036 (2739s)
+  Premium = 22.7%
+
+  Expected if premium stable: S_GUE ≈ 14.1, premium ≈ 20.5%
+  Wigner K=800 gave: S_GUE = 12.365, premium = 9.3%
+  D-E K=800 gives: S_GUE = 14.507, premium = 22.7%
+
+  VERDICT: Premium STABLE at ~23%. Wigner was the artifact.
+
+Saved: output/atft_validation/k800_de_gue.json

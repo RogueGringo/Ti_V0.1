@@ -1,0 +1,10 @@
+{
+  "K": 800,
+  "S_zeta": 11.21,
+  "S_gue_wigner": 12.365,
+  "S_gue_de": 14.507035811226967,
+  "premium_wigner": 9.3,
+  "premium_de": 22.727150150655838,
+  "gue_model": "Dumitriu-Edelman spacing-preserving",
+  "time_s": 2739.0558936595917
+}
