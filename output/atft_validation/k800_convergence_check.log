@@ -1,0 +1,17 @@
+K=800 CONVERGENCE CHECK
+============================================================
+
+[1] Hybrid vs known at K=200...
+Traceback (most recent call last):
+  File "<string>", line 33, in <module>
+  File "/usr/lib/python3.12/subprocess.py", line 550, in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 1209, in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/subprocess.py", line 2116, in _communicate
+    self._check_timeout(endtime, orig_timeout, stdout, stderr)
+  File "/usr/lib/python3.12/subprocess.py", line 1253, in _check_timeout
+    raise TimeoutExpired(
+subprocess.TimeoutExpired: Command '['.venv/bin/python', '-c', '\nimport numpy as np, time\nfrom atft.topology.transport_maps import TransportMapBuilder\nfrom atft.topology.hybrid_sheaf_laplacian import HybridSheafLaplacian\nzeros = np.load("/tmp/tmpvhad4q3s.npy")\nt0 = time.time()\nbuilder = TransportMapBuilder(K=200, sigma=0.5)\nlap = HybridSheafLaplacian(builder, zeros, transport_mode="superposition")\neigs = lap.smallest_eigenvalues(3.0, k=20)\nS = float(np.sum(eigs))\nprint(f"K=200 Hybrid: S={S:.6f} lambda1={eigs[0]:.10f} ({time.time()-t0:.1f}s)")\nnp.save("/tmp/tmp7clu6q4w.npy", eigs)\n']' timed out after 300 seconds
