@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-03-28T17:29:32",
+  "params": {
+    "K": 50,
+    "n_zeros": 200,
+    "n_gue": 10,
+    "sigma": 0.5
+  },
+  "gue_basis_shape": [
+    1,
+    5000
+  ],
+  "gue_gini": 0.9994783270309995,
+  "zeta_transport_shape": [
+    199,
+    5000
+  ],
+  "zeta_prime_proj_gini": 0.0,
+  "zeta_residual_gini": 0.9791308109193666,
+  "residual_richer": true,
+  "h0_gue_proj": 0.5718184270056601,
+  "h0_residual": 0.6759514365446431,
+  "zeta_convergence": {
+    "converged": false,
+    "final_gini": 0.7718012956329201,
+    "final_basis_size": 108,
+    "n_iterations": 25,
+    "trajectory": [
+      0.33304567397593243,
+      0.6853035377094909,
+      0.7440002539162947,
+      0.7218459696082198,
+      0.7759235664068611,
+      0.7587054075114914,
+      0.7229862451652209,
+      0.7378849057342749,
+      0.7931950370798158,
+      0.7713406307219672,
+      0.7654932561091867,
+      0.7917568464602422,
+      0.7562469357982882,
+      0.7846406376319741,
+      0.7778025743031389,
+      0.773200387616384,
+      0.7939753316247962,
+      0.7824764842696428,
+      0.7438233935779481,
+      0.7624531681629496,
+      0.6617561570352424,
+      0.718464419355098,
+      0.7412634609581206,
+      0.7013387062057923,
+      0.7718012956329201
+    ]
+  },
+  "llm_convergence": {
+    "SmolLM2-360M": 0.9371,
+    "Qwen2.5-0.5B": 0.892,
+    "TinyLlama-1.1B": 0.8478,
+    "Qwen2.5-1.5B": 0.9564,
+    "Qwen2.5-3B": 0.8414,
+    "Qwen2.5-7B": 0.9644
+  },
+  "verdict": "PARTIAL \u2014 residual is richer but convergence Gini is out of LLM range",
+  "detail": "Zeta residual IS more hierarchical (0.9791 > 0.0000), but convergence Gini (0.7718) doesn't match LLM range. The hierarchy property transfers; the convergence point may be domain-specific."
+}
